@@ -68,9 +68,9 @@
         }
         
         #instructions {
-            background: rgba(10, 15, 25, 0.9); color: #e9d8a6; padding: 15px; border-radius: 12px;
-            font-size: 15px; text-align: right; pointer-events: none; border: 1px solid #4a5a6a;
-            transition: opacity 0.5s ease; opacity: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            background: rgba(255, 255, 255, 0.9); color: #333; padding: 15px; border-radius: 12px;
+            font-size: 15px; text-align: right; pointer-events: none; border: 1px solid #ccc;
+            transition: opacity 0.5s ease; opacity: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .circle-btn {
@@ -82,25 +82,45 @@
         #back-btn { background: rgba(187, 43, 43, 0.95); color: white; border: 1px solid #ff4d4d; box-shadow: 0 5px 15px rgba(187,43,43,0.4); }
         #back-btn:hover { background: rgba(220, 30, 30, 1); box-shadow: 0 5px 20px rgba(187,43,43,0.6); }
         
-        #hide-ui-btn { background: rgba(10, 15, 25, 0.9); color: #e9d8a6; border: 1px solid #4a5a6a; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        #hide-ui-btn:hover { background: rgba(44, 62, 80, 1); color: white; }
+        #hide-ui-btn { background: rgba(255, 255, 255, 0.9); color: #333; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        #hide-ui-btn:hover { background: #e0e0e0; color: #000; }
 
         #info-panel {
             display: none; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 500px;
-            background: rgba(10, 15, 25, 0.95); color: #fff; padding: 25px; border-radius: 15px; border: 1px solid #e9d8a6;
-            z-index: 200; text-align: right; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            background: rgba(255, 255, 255, 0.95); color: #333; padding: 25px; border-radius: 15px; border: 1px solid #ddd;
+            z-index: 200; text-align: right; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             animation: fadeIn 0.5s ease-out; font-family: 'Tajawal', sans-serif;
         }
         
         @keyframes fadeIn { from { opacity: 0; bottom: -20px; } to { opacity: 1; bottom: 30px; } }
-        #info-title { margin-top: 0; color: #ee9b00; font-size: 26px; font-family: 'Amiri', serif; border-bottom: 1px solid #4a5a6a; padding-bottom: 10px; }
-        #info-desc { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #e2e8f0; }
+        #info-title { margin-top: 0; color: #333; font-size: 26px; font-family: 'Amiri', serif; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        #info-desc { font-size: 16px; line-height: 1.8; margin-bottom: 20px; color: #555; }
         #close-info-btn {
-            background: #2c3e50; color: white; border: 1px solid #4a5a6a; font-weight: bold; font-family: 'Tajawal', sans-serif;
+            background: #e0e0e0; color: #333; border: 1px solid #ccc; font-weight: bold; font-family: 'Tajawal', sans-serif;
             padding: 10px 20px; border-radius: 8px; cursor: pointer; float: left; transition: all 0.2s;
         }
-        #close-info-btn:hover { background: #e9d8a6; color: #05080c; }
+        #close-info-btn:hover { background: #ccc; color: #000; }
+
+        /* التايم لاين الجديد (نُقل للأعلى وتم تعديل ألوانه لتناسب الثيم الفاتح) */
+        #timeline-ui {
+            position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 500px; display: none; z-index: 105;
+            background: rgba(255, 255, 255, 0.9); padding: 15px 25px; border-radius: 30px;
+            border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            align-items: center; gap: 15px; transition: opacity 0.5s;
+        }
+        #timeline-slider {
+            flex-grow: 1; -webkit-appearance: none; height: 6px; background: #ddd;
+            border-radius: 4px; outline: none; direction: rtl; pointer-events: all;
+        }
+        #timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+            background: #333; cursor: pointer; border: 3px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        #timeline-year {
+            color: #333; font-size: 22px; font-weight: bold; font-family: 'Amiri', serif; min-width: 70px; text-align: center;
+        }
     </style>
 
     <script>
@@ -112,13 +132,16 @@
             const info = document.getElementById('info-panel');
             const inst = document.getElementById('instructions');
             const eyeIcon = document.getElementById('eye-icon');
+            const timelineUI = document.getElementById('timeline-ui');
             
             if (window.isUIHidden) {
                 info.style.display = 'none'; inst.style.opacity = '0';
+                if (window.isStairsMode && timelineUI) timelineUI.style.opacity = '0';
                 eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
             } else {
                 if (window.currentRotatingArtifact || window.isStairsMode) info.style.display = 'block';
                 inst.style.opacity = '1';
+                if (window.isStairsMode && timelineUI) timelineUI.style.opacity = '1';
                 eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             }
         }
@@ -153,55 +176,55 @@
             }
         });
 
+        // بناء الغرفة الفخمة البيضاء والرصاصية مع تفعيل استقبال الظلال
+        function buildWhiteElegantRoom(container) {
+            let room = document.createElement('a-entity');
+            
+            // أرضية رصاصية فاتحة جداً تستقبل الظل
+            let floor = document.createElement('a-plane');
+            floor.setAttribute('rotation', '-90 0 0'); floor.setAttribute('width', '80'); floor.setAttribute('height', '80');
+            floor.setAttribute('color', '#e9ecef'); floor.setAttribute('material', 'roughness: 0.4; metalness: 0.1'); 
+            floor.setAttribute('shadow', 'receive: true');
+            room.appendChild(floor);
+
+            // سقف أبيض
+            let ceil = document.createElement('a-plane');
+            ceil.setAttribute('rotation', '90 0 0'); ceil.setAttribute('width', '80'); ceil.setAttribute('height', '80');
+            ceil.setAttribute('color', '#ffffff'); ceil.setAttribute('position', '0 18 0');
+            room.appendChild(ceil);
+
+            // جدران بيضاء ورصاصية فاتحة
+            const walls = [ { x: 0, y: 9, z: -40, rotY: 0 }, { x: 0, y: 9, z: 40, rotY: 180 }, { x: -40, y: 9, z: 0, rotY: 90 }, { x: 40, y: 9, z: 0, rotY: -90 } ];
+
+            walls.forEach(w => {
+                let wall = document.createElement('a-plane');
+                wall.setAttribute('width', '80'); wall.setAttribute('height', '18');
+                wall.setAttribute('color', '#f8f9fa'); wall.setAttribute('material', 'roughness: 0.9; metalness: 0.0');
+                wall.setAttribute('rotation', `0 ${w.rotY} 0`); wall.setAttribute('position', `${w.x} ${w.y} ${w.z}`);
+                wall.setAttribute('shadow', 'receive: true');
+                room.appendChild(wall);
+
+                // إطارات رصاصية داكنة للزينة بدل الذهبي
+                let bottomTrim = document.createElement('a-box');
+                bottomTrim.setAttribute('width', '80'); bottomTrim.setAttribute('height', '0.4'); bottomTrim.setAttribute('depth', '0.2');
+                bottomTrim.setAttribute('color', '#adb5bd'); bottomTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2');
+                bottomTrim.setAttribute('position', `${w.x * 0.99} 0.2 ${w.z * 0.99}`); bottomTrim.setAttribute('rotation', `0 ${w.rotY} 0`);
+                room.appendChild(bottomTrim);
+                
+                let topTrim = document.createElement('a-box');
+                topTrim.setAttribute('width', '80'); topTrim.setAttribute('height', '0.6'); topTrim.setAttribute('depth', '0.4');
+                topTrim.setAttribute('color', '#ced4da'); topTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2');
+                topTrim.setAttribute('position', `${w.x * 0.99} 17.7 ${w.z * 0.99}`); topTrim.setAttribute('rotation', `0 ${w.rotY} 0`);
+                room.appendChild(topTrim);
+            });
+
+            container.appendChild(room);
+        }
+
         window.isStairsMode = false;
         let targetStairProgress = 0;
         let currentStairProgress = 0;
         let maxStairProgress = 0;
-        let isStairDragging = false;
-        let stairDragStartX = 0;
-
-        // دالة بناء الغرفة برمجياً بدون الحاجة لملفات GLTF
-        function buildRoom(container) {
-            let room = document.createElement('a-entity');
-            
-            // الأرضية
-            let floor = document.createElement('a-plane');
-            floor.setAttribute('rotation', '-90 0 0'); floor.setAttribute('width', '50'); floor.setAttribute('height', '50');
-            floor.setAttribute('color', '#111820'); floor.setAttribute('position', '0 0 0');
-            room.appendChild(floor);
-
-            // السقف
-            let ceil = document.createElement('a-plane');
-            ceil.setAttribute('rotation', '90 0 0'); ceil.setAttribute('width', '50'); ceil.setAttribute('height', '50');
-            ceil.setAttribute('color', '#05080c'); ceil.setAttribute('position', '0 12 0');
-            room.appendChild(ceil);
-
-            // جدار أمامي
-            let wall1 = document.createElement('a-plane');
-            wall1.setAttribute('width', '50'); wall1.setAttribute('height', '12');
-            wall1.setAttribute('color', '#1a252c'); wall1.setAttribute('position', '0 6 -25');
-            room.appendChild(wall1);
-
-            // جدار خلفي
-            let wall2 = document.createElement('a-plane');
-            wall2.setAttribute('width', '50'); wall2.setAttribute('height', '12');
-            wall2.setAttribute('color', '#1a252c'); wall2.setAttribute('rotation', '0 180 0'); wall2.setAttribute('position', '0 6 25');
-            room.appendChild(wall2);
-
-            // جدار أيسر
-            let wall3 = document.createElement('a-plane');
-            wall3.setAttribute('width', '50'); wall3.setAttribute('height', '12');
-            wall3.setAttribute('color', '#151e24'); wall3.setAttribute('rotation', '0 90 0'); wall3.setAttribute('position', '-25 6 0');
-            room.appendChild(wall3);
-
-            // جدار أيمن
-            let wall4 = document.createElement('a-plane');
-            wall4.setAttribute('width', '50'); wall4.setAttribute('height', '12');
-            wall4.setAttribute('color', '#151e24'); wall4.setAttribute('rotation', '0 -90 0'); wall4.setAttribute('position', '25 6 0');
-            room.appendChild(wall4);
-
-            container.appendChild(room);
-        }
 
         AFRAME.registerComponent('stairs-manager', {
             tick: function () {
@@ -219,44 +242,35 @@
                 let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
                 let currentArtH = c1.pillarH + (c2.pillarH - c1.pillarH) * t;
                 
-                let camR = 8.0; 
+                let camR = 7.0; 
                 let camX = camR * Math.sin(currentAngle);
                 let camZ = -camR * Math.cos(currentAngle);
-                let camY = currentArtH + 1.5; 
+                let camY = currentArtH + 1.0; 
                 
                 this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
                 
-                let camEl = document.querySelector('#cam');
+                // التعديل الذكي: توجيه الكاميرا للمجسم مع السماح لك بالالتفات
+                let artX = 4.0 * Math.sin(currentAngle);
+                let artZ = -4.0 * Math.cos(currentAngle);
+                let targetVec = new THREE.Vector3(artX, currentArtH + 0.5, artZ);
+                this.el.object3D.lookAt(targetVec); // يوجه المسار الأساسي، بس look-controls يبقى شغال للإصبع!
                 
                 let closest = Math.round(currentStairProgress);
                 if (window.lastShownStairText !== closest) {
                     window.lastShownStairText = closest;
                     document.getElementById('info-title').innerText = window.currentStairsConfig[closest].title;
                     document.getElementById('info-desc').innerText = window.currentStairsConfig[closest].desc;
+                    document.getElementById('timeline-year').innerText = window.currentStairsConfig[closest].year;
                     if (!window.isUIHidden) document.getElementById('info-panel').style.display = 'block';
                 }
             }
         });
 
-        const handleStairDragStart = (x) => {
-            if(!window.isStairsMode || window.isArtifactDragging) return;
-            isStairDragging = true; stairDragStartX = x;
-        };
-        const handleStairDragMove = (x) => {
-            if(!window.isStairsMode || !isStairDragging || window.isArtifactDragging) return;
-            let dx = x - stairDragStartX;
-            targetStairProgress -= dx * 0.006; 
-            targetStairProgress = Math.max(0, Math.min(targetStairProgress, maxStairProgress));
-            stairDragStartX = x;
-        };
-        const handleStairDragEnd = () => { isStairDragging = false; };
-
-        window.addEventListener('mousedown', e => handleStairDragStart(e.clientX));
-        window.addEventListener('mousemove', e => handleStairDragMove(e.clientX));
-        window.addEventListener('mouseup', handleStairDragEnd);
-        window.addEventListener('touchstart', e => handleStairDragStart(e.touches[0].clientX), {passive: true});
-        window.addEventListener('touchmove', e => handleStairDragMove(e.touches[0].clientX), {passive: true});
-        window.addEventListener('touchend', handleStairDragEnd);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('timeline-slider').addEventListener('input', function(e) {
+                targetStairProgress = parseFloat(e.target.value);
+            });
+        });
 
         AFRAME.registerComponent('blender-controls', {
             schema: { speed: {default: 0.015}, zoomSpeed: {default: 0.08} },
@@ -344,18 +358,23 @@
         </div>
     </div>
 
+    <div id="timeline-ui">
+        <span id="timeline-year">1127</span>
+        <input type="range" id="timeline-slider" min="0" max="5" value="0" step="0.01">
+    </div>
+
     <div id="info-panel">
         <h2 id="info-title">عنوان القطعة</h2>
         <p id="info-desc">شرح تفصيلي عن القطعة الأثرية يظهر هنا...</p>
         <button id="close-info-btn" onclick="closeInfoPanel()">إغلاق الشرح</button>
     </div>
 
-    <a-scene id="main-scene" renderer="colorManagement: true;" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+    <a-scene id="main-scene" renderer="colorManagement: true;" shadow="type: pcfsoft" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
         
-        <a-sky color="#05080c" src="ancient_mosul_sky.jpg"></a-sky> 
+        <a-sky src="ancient_mosul_sky.jpg"></a-sky> 
 
-        <a-light type="ambient" color="#bbbbbb"></a-light>
-        <a-light type="directional" intensity="1.5" position="1 4 2"></a-light>
+        <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+        <a-light type="directional" intensity="0.8" position="-2 6 4" castShadow="true"></a-light>
 
         <a-entity id="cameraRig" position="0 1.6 0" blender-controls stairs-manager>
             <a-camera id="cam" look-controls></a-camera>
@@ -429,7 +448,7 @@
 
         const sitesData = {
             'site1': [ 
-                { id: 'p1', model: './models/winged_bull.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 45 0', title: 'الثور المجنح (لاماسو)', desc: 'تمثال ضخم برأس إنسان وجسد ثور وأجنحة نسر.' },
+                { id: 'p1', model: './models/winged_bull.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 45 0', title: 'الثور المجنح (لاماسو)', desc: 'تمثال ضخم برأس إنسان وجسد ثور.' },
                 { id: 'p2', model: './models/ashurbanipal.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'الملك آشور بانيبال', desc: 'آخر الملوك العظماء للإمبراطورية الآشورية الحديثة.' },
                 { id: 'p3', model: './models/cuneiform_tablet.glb', x: 4, z: -4, scale: '1 1 1', rot: '0 -45 0', title: 'لوح مسماري', desc: 'لوح طيني نُقش عليه بالكتابة المسمارية.' }
             ],
@@ -439,12 +458,12 @@
                 { id: 'p6', model: './models/gold_dinar.glb', x: 4, z: -4, scale: '1 1 1', rot: '0 -45 0', title: 'دينار إسلامي', desc: 'عملة نقدية تاريخية ضُربت في الموصل.' }
             ],
             'site3': [ 
-                { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل.' },
-                { id: 'p8', model: './models/nuri_mihrab.glb', title: 'محراب الجامع النوري', desc: 'قطعة فنية نادرة من الرخام.' },
-                { id: 'p9', model: './models/mosuli_ewer.glb', title: 'إبريق نحاسي موصلي', desc: 'تحفة مطعمة بالفضة.' },
-                { id: 'p10', model: './models/bashtabiya.glb', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
-                { id: 'p11', model: './models/wood_box.glb', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.' },
-                { id: 'p12', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية في العالم.' }
+                { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل.', year: '1127 م' },
+                { id: 'p8', model: './models/nuri_mihrab.glb', title: 'محراب الجامع النوري', desc: 'قطعة فنية نادرة من الرخام.', year: '1170 م' },
+                { id: 'p9', model: './models/mosuli_ewer.glb', title: 'إبريق نحاسي موصلي', desc: 'تحفة مطعمة بالفضة.', year: '1172 م' },
+                { id: 'p10', model: './models/bashtabiya.glb', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.', year: '1232 م' },
+                { id: 'p11', model: './models/wood_box.glb', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.', year: '1250 م' },
+                { id: 'p12', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى.', year: '1262 م' }
             ],
             'site4': [ 
                 { id: 'p10', model: './models/bashtabiya.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 0 0', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
@@ -474,8 +493,7 @@
             setTimeout(() => {
                 uiLayer.style.display = 'none'; uiLayer.style.pointerEvents = 'none'; controlsUI.style.display = 'flex'; 
                 
-                // بناء الغرفة المبرمجة بمجرد الدخول
-                buildRoom(pillarsContainer);
+                buildWhiteElegantRoom(pillarsContainer);
 
                 if (siteId === 'site3') {
                     startStairsMode(sitesData[siteId]);
@@ -491,10 +509,18 @@
 
         function startStairsMode(data) {
             window.isStairsMode = true;
-            document.getElementById('instructions').innerHTML = '<b>دليل الدرج الحلزوني:</b><br>↔️ اسحب الشاشة يمين ويسار للدوران<br>👀 الكاميرا تتحرك وتصعد خارج دائرة الأعمدة الجميلة';
+            document.getElementById('instructions').innerHTML = '<b>دليل السجل الزمني:</b><br>↔️ استخدم الشريط بالأسفل للتنقل عبر الزمن<br>👀 المس الشاشة للالتفات حولك';
             
+            let timelineUI = document.getElementById('timeline-ui');
+            timelineUI.style.display = 'flex';
+            setTimeout(() => { timelineUI.style.opacity = '1'; }, 50);
+
+            let slider = document.getElementById('timeline-slider');
+            slider.max = data.length - 1;
+            slider.value = 0;
+
             let N = data.length;
-            let R = 3.5; // الدائرة أكبر حتى الأعمدة ما تتداخل حيل
+            let R = 4.0; 
             
             window.currentStairsConfig = data.map((item, i) => {
                 let angle = i * ((2 * Math.PI) / N); 
@@ -523,24 +549,31 @@
                 group.setAttribute('position', `${item.x} 0 ${item.z}`); 
                 group.setAttribute('scale', '0.001 0.001 0.001');
 
-                // بناء عمود فخم برمجياً بدل الـ GLTF
+                // بناء الأعمدة البيضاء المظللة والأنيقة (تستقبل وترمي ظلال)
                 let pillarGroup = document.createElement('a-entity');
-                // قاعدة العمود ذهبية
+                
                 let base = document.createElement('a-cylinder');
-                base.setAttribute('radius', '0.8'); base.setAttribute('height', '0.2');
-                base.setAttribute('color', '#d4af37'); base.setAttribute('position', '0 0.1 0');
+                base.setAttribute('radius', '0.8'); base.setAttribute('height', '0.3');
+                base.setAttribute('color', '#ced4da'); base.setAttribute('material', 'roughness: 0.5; metalness: 0.1');
+                base.setAttribute('position', '0 0.15 0');
+                base.setAttribute('shadow', 'cast: true; receive: true');
                 pillarGroup.appendChild(base);
-                // جسم العمود غامق
+                
                 let shaft = document.createElement('a-cylinder');
-                shaft.setAttribute('radius', '0.6'); shaft.setAttribute('height', item.pillarH - 0.4);
-                shaft.setAttribute('color', '#2c3e50'); shaft.setAttribute('position', `0 ${item.pillarH/2} 0`);
+                shaft.setAttribute('radius', '0.5'); shaft.setAttribute('height', item.pillarH - 0.6);
+                shaft.setAttribute('color', '#ffffff'); shaft.setAttribute('position', `0 ${item.pillarH/2} 0`);
+                shaft.setAttribute('shadow', 'cast: true; receive: true');
                 pillarGroup.appendChild(shaft);
-                // تاج العمود ذهبي
+                
                 let cap = document.createElement('a-cylinder');
-                cap.setAttribute('radius', '0.8'); cap.setAttribute('height', '0.2');
-                cap.setAttribute('color', '#d4af37'); cap.setAttribute('position', `0 ${item.pillarH - 0.1} 0`);
+                cap.setAttribute('radius', '0.8'); cap.setAttribute('height', '0.3');
+                cap.setAttribute('color', '#ced4da'); cap.setAttribute('material', 'roughness: 0.5; metalness: 0.1');
+                cap.setAttribute('position', `0 ${item.pillarH - 0.15} 0`);
+                cap.setAttribute('shadow', 'cast: true; receive: true');
                 pillarGroup.appendChild(cap);
                 
+                let rotYarcade = (item.angle * 180 / Math.PI);
+                pillarGroup.setAttribute('rotation', `0 ${rotYarcade} 0`); 
                 group.appendChild(pillarGroup);
 
                 let artifact;
@@ -548,6 +581,7 @@
                     artifact = document.createElement('a-entity');
                     artifact.setAttribute('gltf-model', `url(${item.model})`); 
                     artifact.setAttribute('scale', '0.8 0.8 0.8'); 
+                    artifact.setAttribute('shadow', 'cast: true; receive: true');
                     
                     let rotY = (item.angle * 180 / Math.PI);
                     artifact.setAttribute('rotation', `0 ${rotY} 0`); 
@@ -568,14 +602,20 @@
                 let group = document.createElement('a-entity');
                 group.setAttribute('position', `${item.x} -5 ${item.z}`); 
 
+                // الأعمدة البيضاء المظللة في القاعات العادية
                 let pillar = document.createElement('a-cylinder');
-                pillar.setAttribute('radius', '0.6'); pillar.setAttribute('height', '1.5'); pillar.setAttribute('color', '#2c3e50'); pillar.setAttribute('class', 'clickable'); 
+                pillar.setAttribute('radius', '0.6'); pillar.setAttribute('height', '1.5'); 
+                pillar.setAttribute('color', '#f8f9fa'); pillar.setAttribute('class', 'clickable'); 
+                pillar.setAttribute('shadow', 'cast: true; receive: true');
                 group.appendChild(pillar);
 
                 let artifact;
                 if (item.model) {
                     artifact = document.createElement('a-entity');
-                    artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '0.8 0.8 0.8'); artifact.setAttribute('rotation', item.rot); artifact.setAttribute('position', '0 0.75 0'); artifact.setAttribute('class', 'clickable'); 
+                    artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '0.8 0.8 0.8'); 
+                    artifact.setAttribute('rotation', item.rot); artifact.setAttribute('position', '0 0.75 0'); 
+                    artifact.setAttribute('class', 'clickable'); 
+                    artifact.setAttribute('shadow', 'cast: true; receive: true');
                     group.appendChild(artifact);
                 }
                 pillarsContainer.appendChild(group);
@@ -618,6 +658,9 @@
             window.isUIHidden = false; 
             window.isStairsMode = false;
             
+            document.getElementById('timeline-ui').style.display = 'none';
+            document.getElementById('timeline-ui').style.opacity = '0';
+
             let eyeIcon = document.getElementById('eye-icon');
             if(eyeIcon) eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             
