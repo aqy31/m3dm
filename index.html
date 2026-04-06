@@ -43,42 +43,27 @@
             letter-spacing: 1px;
         }
 
+        /* التعديل هنا: ستايل الأيقونات الكبيرة بصيغة PNG */
         .map-pin {
-            position: absolute; display: flex; align-items: center; gap: 12px;
-            cursor: pointer; transform: translate(-50%, -50%);
+            position: absolute; 
+            cursor: pointer; 
+            transform: translate(-50%, -50%);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* التعديل 1: إضافة ستايل الصور المصغرة وتأثير الضغط */
         .pin-img {
-            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
-            border: 2px solid #ee9b00; box-shadow: 0 0 10px rgba(0,0,0,0.8);
-            pointer-events: none; transition: all 0.3s ease;
+            width: 120px; /* حجم كبير للأيقونة */
+            height: auto;
+            pointer-events: none; 
+            transition: all 0.3s ease;
+            /* استخدمنا drop-shadow لأن الصور png شفافة حتى الظل ياخذ شكل القطعة */
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.8)); 
         }
+
+        /* تأثير الضغط واللمس للصور */
+        .map-pin:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 10; }
+        .map-pin:hover .pin-img { filter: drop-shadow(0 10px 25px rgba(238, 155, 0, 0.8)); }
         .map-pin:active { transform: translate(-50%, -50%) scale(0.85) !important; }
-        .map-pin:hover .pin-img { border-color: #fff; box-shadow: 0 0 15px #fff; }
-
-        .pin-dot {
-            width: 22px; height: 22px; background-color: #ee9b00; border-radius: 50%;
-            box-shadow: 0 0 15px #ee9b00, inset 0 0 5px #fff;
-            animation: pulse 1.5s infinite; border: 2px solid #fff;
-        }
-
-        .pin-label {
-            background: rgba(10, 15, 25, 0.9); color: #e9d8a6; padding: 10px 20px;
-            border-radius: 30px; border: 1px solid #4a5a6a; font-weight: bold; font-size: 17px;
-            white-space: nowrap; box-shadow: 0 5px 15px rgba(0,0,0,0.6); transition: all 0.3s ease;
-        }
-
-        .map-pin:hover { transform: translate(-50%, -50%) scale(1.1); z-index: 10; }
-        .map-pin:hover .pin-dot { background-color: #fff; box-shadow: 0 0 25px #fff; animation: none; }
-        .map-pin:hover .pin-label { background: #e9d8a6; color: #05080c; border-color: #e9d8a6; }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(238, 155, 0, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(238, 155, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(238, 155, 0, 0); }
-        }
 
         #controls-ui {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 101;
@@ -125,7 +110,6 @@
         window.isUIHidden = false;
         window.isArtifactDragging = false; 
         
-        // التعديل 2: تحديث دالة إخفاء وإظهار الواجهة لتقبل الإجبار (forceState)
         function toggleUI(forceState) {
             window.isUIHidden = typeof forceState === 'boolean' ? forceState : !window.isUIHidden;
             const info = document.getElementById('info-panel');
@@ -271,19 +255,16 @@
                 let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); 
                 v.applyEuler(camRot); 
                 this.el.object3D.position.add(v); 
-                
-                // التعديل 3: إخفاء الواجهة عند تحريك الكاميرا (Pan)
                 toggleUI(true); 
             },
             zoom: function(dz) {
                 if (!this.camera) return; this.el.removeAttribute('animation'); 
                 let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(0, 0, dz); v.applyEuler(camRot); this.el.object3D.position.add(v);
                 
-                // التعديل 4: إخفاء الواجهة عند التقريب، وإظهارها عند التبعيد
                 if (dz < -0.001) { 
-                    toggleUI(true); // إخفاء عند الزووم ان
+                    toggleUI(true); 
                 } else if (dz > 0.001) { 
-                    toggleUI(false); // إظهار عند الزووم اوت
+                    toggleUI(false); 
                 }
             }
         });
@@ -296,24 +277,19 @@
         
         <div id="map-content">
             <div id="pin-nergal" class="map-pin" style="top: 69%; left: 28%;" onclick="enterSite('site1')">
-                <img src="site1.jpg" alt="" class="pin-img">
-                <div class="pin-dot"></div><div class="pin-label">📍 بوابة نرجال</div>
+                <img src="site1.png" alt="بوابة نرجال" class="pin-img">
             </div>
             <div id="pin-kouyunjik" class="map-pin" style="top: 37%; left: 42%;" onclick="enterSite('site2')">
-                <img src="site2.jpg" alt="" class="pin-img">
-                <div class="pin-dot"></div><div class="pin-label">📍 تل قوينجق</div>
+                <img src="site2.png" alt="تل قوينجق" class="pin-img">
             </div>
             <div id="pin-nuri" class="map-pin" style="top: 34%; left: 43%;" onclick="enterSite('site3')">
-                <img src="site3.jpg" alt="" class="pin-img">
-                <div class="pin-dot"></div><div class="pin-label">📍 المنارة الحدباء</div>
+                <img src="site3.png" alt="المنارة الحدباء" class="pin-img">
             </div>
             <div id="pin-bashtabiya" class="map-pin" style="top: 24%; left: 54%;" onclick="enterSite('site4')">
-                <img src="site4.jpg" alt="" class="pin-img">
-                <div class="pin-dot"></div><div class="pin-label">📍 قلعة باشطابيا</div>
+                <img src="site4.png" alt="قلعة باشطابيا" class="pin-img">
             </div>
             <div id="pin-museum" class="map-pin" style="top: 51%; left: 47%;" onclick="enterSite('site5')">
-                <img src="site5.jpg" alt="" class="pin-img">
-                <div class="pin-dot"></div><div class="pin-label">📍 القاعة الرئيسية</div>
+                <img src="site5.png" alt="القاعة الرئيسية" class="pin-img">
             </div>
         </div>
     </div>
