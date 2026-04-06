@@ -49,6 +49,15 @@
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
+        /* التعديل 1: إضافة ستايل الصور المصغرة وتأثير الضغط */
+        .pin-img {
+            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
+            border: 2px solid #ee9b00; box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            pointer-events: none; transition: all 0.3s ease;
+        }
+        .map-pin:active { transform: translate(-50%, -50%) scale(0.85) !important; }
+        .map-pin:hover .pin-img { border-color: #fff; box-shadow: 0 0 15px #fff; }
+
         .pin-dot {
             width: 22px; height: 22px; background-color: #ee9b00; border-radius: 50%;
             box-shadow: 0 0 15px #ee9b00, inset 0 0 5px #fff;
@@ -116,8 +125,9 @@
         window.isUIHidden = false;
         window.isArtifactDragging = false; 
         
-        function toggleUI() {
-            window.isUIHidden = !window.isUIHidden;
+        // التعديل 2: تحديث دالة إخفاء وإظهار الواجهة لتقبل الإجبار (forceState)
+        function toggleUI(forceState) {
+            window.isUIHidden = typeof forceState === 'boolean' ? forceState : !window.isUIHidden;
             const info = document.getElementById('info-panel');
             const inst = document.getElementById('instructions');
             const eyeIcon = document.getElementById('eye-icon');
@@ -162,9 +172,6 @@
             }
         });
 
-        // ==========================================
-        // نظام الدرج الحلزوني المحدث والمضمون 100%
-        // ==========================================
         window.isStairsMode = false;
         let targetStairProgress = 0;
         let currentStairProgress = 0;
@@ -188,19 +195,16 @@
                 let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
                 let currentArtH = c1.pillarH + (c2.pillarH - c1.pillarH) * t;
                 
-                // الكاميرا تتحرك في دائرة خارجية وتصعد لتشاهد الدرج
-                let camR = 8.0; // مسافة كافية لرؤية المجموعة كاملة
+                let camR = 8.0; 
                 let camX = camR * Math.sin(currentAngle);
                 let camZ = -camR * Math.cos(currentAngle);
                 let camY = currentArtH + 1.5; 
                 
                 this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
                 
-                // توجيه الكاميرا نحو المركز بقوة
                 let centerTarget = new THREE.Vector3(0, currentArtH / 2, 0);
                 this.el.object3D.lookAt(centerTarget);
                 
-                // إجبار الكاميرا الداخلية على تصفير دورانها لتجنب التداخل
                 let camEl = document.querySelector('#cam');
                 if (camEl) camEl.object3D.rotation.set(0, 0, 0);
                 
@@ -261,14 +265,26 @@
                 document.addEventListener('touchend', () => this.active = false);
                 document.addEventListener('wheel', (e) => { if(!window.isStairsMode) this.zoom(e.deltaY * 0.02); });
             },
-            pan: function(dx, dy) { if (!this.camera) return; let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); v.applyEuler(camRot); this.el.object3D.position.add(v); },
+            pan: function(dx, dy) { 
+                if (!this.camera) return; 
+                let camRot = this.camera.object3D.rotation; 
+                let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); 
+                v.applyEuler(camRot); 
+                this.el.object3D.position.add(v); 
+                
+                // التعديل 3: إخفاء الواجهة عند تحريك الكاميرا (Pan)
+                toggleUI(true); 
+            },
             zoom: function(dz) {
                 if (!this.camera) return; this.el.removeAttribute('animation'); 
                 let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(0, 0, dz); v.applyEuler(camRot); this.el.object3D.position.add(v);
-                let infoPanel = document.getElementById('info-panel'), instructions = document.getElementById('instructions');
-                if (infoPanel) infoPanel.style.display = 'none'; if (instructions) instructions.style.opacity = '0';
-                window.isUIHidden = true; let eyeIcon = document.getElementById('eye-icon');
-                if(eyeIcon) eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+                
+                // التعديل 4: إخفاء الواجهة عند التقريب، وإظهارها عند التبعيد
+                if (dz < -0.001) { 
+                    toggleUI(true); // إخفاء عند الزووم ان
+                } else if (dz > 0.001) { 
+                    toggleUI(false); // إظهار عند الزووم اوت
+                }
             }
         });
     </script>
@@ -280,18 +296,23 @@
         
         <div id="map-content">
             <div id="pin-nergal" class="map-pin" style="top: 69%; left: 28%;" onclick="enterSite('site1')">
+                <img src="site1.jpg" alt="" class="pin-img">
                 <div class="pin-dot"></div><div class="pin-label">📍 بوابة نرجال</div>
             </div>
             <div id="pin-kouyunjik" class="map-pin" style="top: 37%; left: 42%;" onclick="enterSite('site2')">
+                <img src="site2.jpg" alt="" class="pin-img">
                 <div class="pin-dot"></div><div class="pin-label">📍 تل قوينجق</div>
             </div>
             <div id="pin-nuri" class="map-pin" style="top: 34%; left: 43%;" onclick="enterSite('site3')">
+                <img src="site3.jpg" alt="" class="pin-img">
                 <div class="pin-dot"></div><div class="pin-label">📍 المنارة الحدباء</div>
             </div>
             <div id="pin-bashtabiya" class="map-pin" style="top: 24%; left: 54%;" onclick="enterSite('site4')">
+                <img src="site4.jpg" alt="" class="pin-img">
                 <div class="pin-dot"></div><div class="pin-label">📍 قلعة باشطابيا</div>
             </div>
             <div id="pin-museum" class="map-pin" style="top: 51%; left: 47%;" onclick="enterSite('site5')">
+                <img src="site5.jpg" alt="" class="pin-img">
                 <div class="pin-dot"></div><div class="pin-label">📍 القاعة الرئيسية</div>
             </div>
         </div>
@@ -403,7 +424,6 @@
                 { id: 'p5', model: './models/spring_girl.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'تمثال فتاة الربيع', desc: 'أحد الرموز الحديثة لمدينة الموصل.' },
                 { id: 'p6', model: './models/gold_dinar.glb', x: 4, z: -4, scale: '1 1 1', rot: '0 -45 0', title: 'دينار إسلامي', desc: 'عملة نقدية تاريخية ضُربت في الموصل.' }
             ],
-            // 6 قطع للحدباء تدور حول الوسط كدرج حلزوني
             'site3': [ 
                 { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل، تميزت بميلانها الأيقوني.' },
                 { id: 'p8', model: './models/nuri_mihrab.glb', title: 'محراب الجامع النوري', desc: 'قطعة فنية نادرة من الرخام بزخارف دقيقة جداً.' },
@@ -435,7 +455,7 @@
             
             let camEl = document.querySelector('#cam');
             if(camEl) {
-                camEl.object3D.rotation.set(0, 0, 0); // تصفير دوران الكاميرا لتجنب المشاكل
+                camEl.object3D.rotation.set(0, 0, 0); 
             }
             cameraRig.removeAttribute('animation');
 
@@ -461,11 +481,11 @@
             pillarsContainer.innerHTML = ''; 
             
             let N = data.length;
-            let R = 2.5; // نصف قطر الدائرة المركزية للدرج
+            let R = 2.5; 
             
             window.currentStairsConfig = data.map((item, i) => {
-                let angle = i * ((2 * Math.PI) / N); // توزيع القطع 360 درجة
-                let h = 1.0 + (i * 1.5); // ارتفاع تصاعدي للدرج
+                let angle = i * ((2 * Math.PI) / N); 
+                let h = 1.0 + (i * 1.5); 
                 
                 return { 
                     ...item, 
@@ -482,13 +502,11 @@
             currentStairProgress = 0;
             window.lastShownStairText = -1;
             
-            // قفل تحكم look-controls العادي للحدباء حتى نستلم السيطرة
             let camEl = document.querySelector('#cam');
             if(camEl) camEl.setAttribute('look-controls', 'enabled', false);
             
             window.currentStairsConfig.forEach((item, index) => {
                 let group = document.createElement('a-entity');
-                // تظهر القطع مباشرة وبحجم صفر ثم تكبر (لضمان رؤيتها)
                 group.setAttribute('position', `${item.x} 0 ${item.z}`); 
                 group.setAttribute('scale', '0.001 0.001 0.001');
 
@@ -505,7 +523,6 @@
                     artifact.setAttribute('gltf-model', `url(${item.model})`); 
                     artifact.setAttribute('scale', '0.8 0.8 0.8'); 
                     
-                    // توجيه القطعة للخارج باتجاه الكاميرا
                     let rotY = (item.angle * 180 / Math.PI);
                     artifact.setAttribute('rotation', `0 ${rotY} 0`); 
                     
@@ -517,7 +534,6 @@
                 pillarsContainer.appendChild(group);
 
                 let delay = index * 150; 
-                // حركة ظهورية جميلة ومضمونة كدام الشاشة
                 group.setAttribute('animation', `property: scale; to: 1 1 1; dur: 1500; easing: easeOutBack; delay: ${delay}`);
             });
         }
