@@ -43,7 +43,6 @@
             letter-spacing: 1px;
         }
 
-        /* التعديل هنا: ستايل الأيقونات الكبيرة بصيغة PNG */
         .map-pin {
             position: absolute; 
             cursor: pointer; 
@@ -52,15 +51,13 @@
         }
 
         .pin-img {
-            width: 120px; /* حجم كبير للأيقونة */
+            width: 120px; 
             height: auto;
             pointer-events: none; 
             transition: all 0.3s ease;
-            /* استخدمنا drop-shadow لأن الصور png شفافة حتى الظل ياخذ شكل القطعة */
             filter: drop-shadow(0 10px 15px rgba(0,0,0,0.8)); 
         }
 
-        /* تأثير الضغط واللمس للصور */
         .map-pin:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 10; }
         .map-pin:hover .pin-img { filter: drop-shadow(0 10px 25px rgba(238, 155, 0, 0.8)); }
         .map-pin:active { transform: translate(-50%, -50%) scale(0.85) !important; }
@@ -186,11 +183,13 @@
                 
                 this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
                 
-                let centerTarget = new THREE.Vector3(0, currentArtH / 2, 0);
-                this.el.object3D.lookAt(centerTarget);
+                let centersTarget = new THREE.Vector3(0, currentArtH / 2, 0);
+                // التعديل: إيقاف توجيه الكاميرا للمركز لتمكين الدوران اليدوي
+                // this.el.object3D.lookAt(centerTarget);
                 
                 let camEl = document.querySelector('#cam');
-                if (camEl) camEl.object3D.rotation.set(0, 0, 0);
+                // التعديل: إيقاف تصفير دوران الكاميرا لتجنب المشاكل
+                // if (camEl) camEl.object3D.rotation.set(0, 0, 0);
                 
                 let closest = Math.round(currentStairProgress);
                 if (window.lastShownStairText !== closest) {
@@ -249,18 +248,10 @@
                 document.addEventListener('touchend', () => this.active = false);
                 document.addEventListener('wheel', (e) => { if(!window.isStairsMode) this.zoom(e.deltaY * 0.02); });
             },
-            pan: function(dx, dy) { 
-                if (!this.camera) return; 
-                let camRot = this.camera.object3D.rotation; 
-                let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); 
-                v.applyEuler(camRot); 
-                this.el.object3D.position.add(v); 
-                toggleUI(true); 
-            },
+            pan: function(dx, dy) { if (!this.camera) return; let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); v.applyEuler(camRot); this.el.object3D.position.add(v); toggleUI(true); },
             zoom: function(dz) {
                 if (!this.camera) return; this.el.removeAttribute('animation'); 
                 let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(0, 0, dz); v.applyEuler(camRot); this.el.object3D.position.add(v);
-                
                 if (dz < -0.001) { 
                     toggleUI(true); 
                 } else if (dz > 0.001) { 
@@ -314,8 +305,9 @@
         <button id="close-info-btn" onclick="closeInfoPanel()">إغلاق الشرح</button>
     </div>
 
-    <a-scene id="main-scene" background="color: #1a1a1a" renderer="colorManagement: true;" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
-        <a-light type="ambient" color="#bbbbbb"></a-light>
+    <a-scene id="main-scene" renderer="colorManagement: true;" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+        
+        <a-sky src="ancient_mosul_sky.jpg"></a-sky> <a-entity gltf-model="url(virtual_mosul_skyline.glb)" position="0 -1 -50" scale="20 20 20"></a-entity> <a-light type="ambient" color="#bbbbbb"></a-light>
         <a-light type="directional" intensity="1.5" position="1 4 2"></a-light>
         <a-grid material="color: #333" position="0 -0.01 0"></a-grid>
 
@@ -404,9 +396,9 @@
                 { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل، تميزت بميلانها الأيقوني.' },
                 { id: 'p8', model: './models/nuri_mihrab.glb', title: 'محراب الجامع النوري', desc: 'قطعة فنية نادرة من الرخام بزخارف دقيقة جداً.' },
                 { id: 'p9', model: './models/mosuli_ewer.glb', title: 'إبريق نحاسي موصلي', desc: 'تحفة مطعمة بالفضة تدل على براعة الحرفيين القدماء.' },
-                { id: 'p10', model: './models/wood_box.glb', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.' },
-                { id: 'p11', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية في العالم.' },
-                { id: 'p12', model: './models/gold_dinar.glb', title: 'دينار إسلامي', desc: 'عملة نقدية تاريخية ضُربت في الموصل.' }
+                { id: 'p10', model: './models/bashtabiya.glb', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
+                { id: 'p11', model: './models/wood_box.glb', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.' },
+                { id: 'p12', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية في العالم.' }
             ],
             'site4': [ 
                 { id: 'p10', model: './models/bashtabiya.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 0 0', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
@@ -441,7 +433,8 @@
                 if (siteId === 'site3') {
                     startStairsMode(sitesData[siteId]);
                 } else {
-                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها';
+                    // التعديل: تحديث الدليل ليوضح أنها غرفة مغلقة
+                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم في القاعة:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها';
                     cameraRig.setAttribute('position', '0 1.6 0');
                     cameraRig.setAttribute('rotation', '0 0 0');
                     if(camEl) camEl.setAttribute('look-controls', 'enabled', true);
@@ -450,12 +443,22 @@
             }, 800);
         }
 
+        // ==========================================
+        // تعديل: نظام الدرج الحلزوني المغلق في الحدباء
+        // ==========================================
         function startStairsMode(data) {
             window.isStairsMode = true;
-            document.getElementById('instructions').innerHTML = '<b>دليل الدرج الحلزوني:</b><br>↔️ اسحب الشاشة يمين ويسار للدوران<br>👀 الكاميرا تدور وتصعد حول الدرج تلقائياً';
+            document.getElementById('instructions').innerHTML = '<b>دليل الدرج الحلزوني:</b><br>↔️ اسحب الشاشة يمين ويسار للدوران<br>👀 الكاميرا تتحرك وتصعد خارج دائرة الأعمدة الجميلة';
             
             pillarsContainer.innerHTML = ''; 
             
+            // التعديل: إضافة غلاف (غرفة) كامل حول الدرج الحلزوني
+            let stairEnclosure = document.createElement('a-entity');
+            stairEnclosure.setAttribute('gltf-model', 'url(stairs_enclosure_room.glb)'); // Placeholder room model for site3
+            stairEnclosure.setAttribute('position', '0 0 0');
+            stairEnclosure.setAttribute('scale', '3 3 3'); // حجم كبير ليغطي الدرج بالكامل
+            pillarsContainer.appendChild(stairEnclosure);
+
             let N = data.length;
             let R = 2.5; 
             
@@ -479,19 +482,26 @@
             window.lastShownStairText = -1;
             
             let camEl = document.querySelector('#cam');
-            if(camEl) camEl.setAttribute('look-controls', 'enabled', false);
+            if(camEl) {
+                // التعديل: إبقاء تحكم look-controls مفعلاً وتصفير التوجيه التلقائي
+                camEl.setAttribute('look-controls', 'enabled', true);
+            }
             
             window.currentStairsConfig.forEach((item, index) => {
                 let group = document.createElement('a-entity');
                 group.setAttribute('position', `${item.x} 0 ${item.z}`); 
                 group.setAttribute('scale', '0.001 0.001 0.001');
 
-                let pillar = document.createElement('a-cylinder');
-                pillar.setAttribute('radius', '1.8'); 
-                pillar.setAttribute('color', '#2c3e50');
-                pillar.setAttribute('height', item.pillarH); 
-                pillar.setAttribute('position', `0 ${item.pillarH / 2} 0`);
-                group.appendChild(pillar);
+                // التعديل: استبدال الـ a-cylinder بمجسم GLTF للأعمدة الجميلة والراقية
+                let arcadeSection = document.createElement('a-entity');
+                arcadeSection.setAttribute('gltf-model', 'url(beautiful_interconnected_column.glb)'); // Placeholder section model
+                arcadeSection.setAttribute('scale', '1 1 1'); 
+                
+                // التعديل: توجيه الأعمدة للخارج
+                let rotYarcade = (item.angle * 180 / Math.PI);
+                arcadeSection.setAttribute('rotation', `0 ${rotYarcade} 0`); 
+                arcadeSection.setAttribute('position', `0 0 0`);
+                group.appendChild(arcadeSection);
 
                 let artifact;
                 if (item.model) {
@@ -514,8 +524,19 @@
             });
         }
 
+        // ==========================================
+        // تعديل: نظام القاعات المغلقة (الغرف) في باقي المواقع
+        // ==========================================
         function spawnPillarsAndArtifacts(data) {
             pillarsContainer.innerHTML = ''; 
+            
+            // التعديل: إضافة صندوق مغلف (غرفة) كامل حول القاعة
+            let archeologicalHall = document.createElement('a-entity');
+            archeologicalHall.setAttribute('gltf-model', 'url(ancient_museum_hall_room.glb)'); // Placeholder room model for other sites
+            archeologicalHall.setAttribute('position', '0 0 0');
+            archeologicalHall.setAttribute('scale', '5 2.5 5'); // حجم ضخم ليغطي القاعة
+            pillarsContainer.appendChild(archeologicalHall);
+
             data.forEach((item, index) => {
                 let group = document.createElement('a-entity');
                 group.setAttribute('position', `${item.x} -5 ${item.z}`); 
