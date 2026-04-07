@@ -158,12 +158,16 @@
                     if (e.touches && e.touches.length > 1) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); return; }
                     let clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : undefined);
                     if(clientX === undefined) return;
-                    let deltaX = clientX - this.previousX; this.el.object3D.rotation.y += deltaX * 0.015; this.previousX = clientX;
+                    let deltaX = clientX - this.previousX; 
+                    // الدوران اليدوي السريع
+                    this.el.object3D.rotation.y += deltaX * 0.04; 
+                    this.previousX = clientX;
                 };
                 this.onUp = () => { if(this.isDragging) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); } };
                 this.el.addEventListener('mousedown', this.onDown); window.addEventListener('mousemove', this.onMove);
                 window.addEventListener('mouseup', this.onUp); window.addEventListener('touchmove', this.onMove, {passive: true}); window.addEventListener('touchend', this.onUp);
             },
+            // تم إرجاع الدوران التلقائي المستمر هنا ليعمل إذا لم تكن تلمس المجسم
             tick: function () { if (!this.isDragging) this.el.object3D.rotation.y += 0.005; },
             remove: function () {
                 this.el.removeEventListener('mousedown', this.onDown); window.removeEventListener('mousemove', this.onMove);
@@ -186,7 +190,6 @@
             container.appendChild(room);
         }
 
-        // بناء الغرفة الداكنة لقوينجق (Site 2)
         function buildKouyunjikDarkRoom(container) {
             pillarsContainer.setAttribute('data-room-type', 'dark_kouyunjik'); 
             let room = document.createElement('a-entity');
@@ -223,7 +226,6 @@
                 let c1 = config[idx1], c2 = config[idx2];
                 
                 if (window.currentRoomType === 'site2') {
-                    // حركة الكاميرا الفعلية بخط مستقيم بين القطع والمحطات (Walkthrough)
                     let currentCamX = c1.camX + (c2.camX - c1.camX) * t;
                     let currentCamZ = c1.camZ + (c2.camZ - c1.camZ) * t;
                     
@@ -231,15 +233,14 @@
                     let artZ = c1.z + (c2.z - c1.z) * t;
                     let artY = c1.artY + (c2.artY - c1.artY) * t;
 
-                    // حساب الزووم لتقريب وتبعيد الكاميرا
                     let dirX = artX - currentCamX;
                     let dirZ = artZ - currentCamZ;
                     let len = Math.sqrt(dirX*dirX + dirZ*dirZ);
                     if(len > 0) { dirX /= len; dirZ /= len; }
 
                     let zoom = window.stairZoom || 0; 
-                    if (zoom < -5) zoom = -5; // أقصى حد للتقريب للأمام
-                    if (zoom > 5) zoom = 5;   // أقصى حد للرجوع للخلف
+                    if (zoom < -7.5) zoom = -7.5; 
+                    if (zoom > 5) zoom = 5;   
                     window.stairZoom = zoom;
 
                     currentCamX += dirX * (-zoom);
@@ -247,18 +248,16 @@
 
                     this.el.setAttribute('position', `${currentCamX} 1.6 ${currentCamZ}`);
                     
-                    // توجيه الكاميرا نحو القطعة دائماً أثناء المشي
                     let targetVec = new THREE.Vector3(artX, artY, artZ);
                     this.el.object3D.lookAt(targetVec);
 
                 } else {
-                    // حركة دائرية للحدباء (السلم الزمني)
                     let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
                     let currentH = c1.artY + (c2.artY - c1.artY) * t; 
                     
                     let defaultCamR = 7.0;
                     let camR = defaultCamR + (window.stairZoom || 0); 
-                    if (camR < 2.0) { camR = 2.0; window.stairZoom = 2.0 - 7.0; }
+                    if (camR < 1.5) { camR = 1.5; window.stairZoom = 1.5 - 7.0; }
                     if (camR > 15.0) { camR = 15.0; window.stairZoom = 15.0 - 7.0; }
 
                     let camX = camR * Math.sin(currentAngle);
@@ -290,6 +289,12 @@
                     targetStairProgress = parseFloat(e.target.value);
                 } else if (window.currentRoomType === 'site2') {
                     site2TargetProgress = parseFloat(e.target.value);
+                }
+                
+                let camEl = document.querySelector('#cam');
+                if(camEl && camEl.components['look-controls']) {
+                    camEl.components['look-controls'].yawObject.rotation.set(0,0,0);
+                    camEl.components['look-controls'].pitchObject.rotation.set(0,0,0);
                 }
             });
         });
@@ -362,7 +367,7 @@
 
     <div id="controls-ui">
         <div id="instructions">
-            <b>دليل التحكم:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها
+            <b>دليل التحكم:</b><br>👆 إصبع واحد: التفات وإدارة المجسمات<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ نقرة واحدة: تقريب عميق للمجسم
         </div>
         <div style="display: flex; gap: 10px;">
             <button id="hide-ui-btn" class="circle-btn" onclick="toggleUI()" title="إخفاء/إظهار الواجهة">
@@ -430,7 +435,6 @@
         window.addEventListener('touchend', function() { mapPanning = false; });
         mapContent.addEventListener('wheel', function(e) { e.preventDefault(); let delta = (e.wheelDelta ? e.wheelDelta : -e.deltaY); (delta > 0) ? (scale *= 1.1) : (scale /= 1.1); scale = Math.min(Math.max(minScale, scale), 3); updateMapTransform(); }, {passive: false});
 
-        // بيانات الغرفة - تمت إضافة مسار السير الفعلي كـ X و Z لكل قطعة ومكان الكاميرا
         const sitesData = {
             'site1': [ 
                 { id: 'p1', model: './models/winged_bull.glb', x: -4, z: -4, scale: '2.5 2.5 2.5', rot: '0 45 0', title: 'الثور المجنح (لاماسو)', desc: 'تمثال ضخم برأس إنسان وجسد ثور.' },
@@ -438,14 +442,12 @@
                 { id: 'p3', model: './models/cuneiform_tablet.glb', x: 4, z: -4, scale: '2.5 2.5 2.5', rot: '0 -45 0', title: 'لوح مسماري', desc: 'لوح طيني نُقش عليه بالكتابة المسمارية.' }
             ],
             'site2': [ 
-                // وضعيات مخصصة للقطع وللكاميرا لإنشاء مسار سير حقيقي على شكل أضلاع الغرفة (مربع)
                 { type: 'door', title: 'بوابة القاعة', desc: 'مدخل قاعة سنحاريب وأشور بانيبال. تقدم بالسكرول لتبدأ الجولة وتتحرك داخل الغرفة.', year: 'البداية', x: 0, z: 29.5, rot: 180, camX: 0, camZ: 20 },
                 { type: 'panel', panel_img: './models/ashurbanipal_relief.png', title: 'منحوتة صيد الأسود', desc: 'جدارية من القصر الشمالي لأشور بانيبال.', year: '645 ق.م', x: 29.5, z: 10, rot: -90, camX: 20, camZ: 10 },
                 { type: 'cube_artifact', model: './models/cuneiform_tablet.glb', title: 'رقم طيني مسماري', desc: 'من مكتبة أشور بانيبال الشهيرة.', year: 'العصر الآشوري الحديث', x: 29.5, z: -10, rot: -90, camX: 20, camZ: -10 },
                 { type: 'sculpture', model: './models/sennacherib_sculpture.glb', title: 'تمثال الملك سنحاريب', desc: 'الملك الآشوري الذي جعل نينوى عاصمة.', year: '700 ق.م', x: 0, z: -29.5, rot: 0, camX: 0, camZ: -20 },
                 { type: 'hanging_pot', model: './models/pottery_jar.glb', title: 'إناء فخاري آشوري', desc: 'تم العثور عليه في تل قوينجق.', year: '700 ق.م', x: -29.5, z: -10, rot: 90, camX: -20, camZ: -10 },
                 { type: 'cube_artifact', model: './models/cylinder_seal.glb', title: 'ختم اسطواني ملكي', desc: 'تظهر عليه مشاهد دينية وحربية.', year: 'العصر الآشوري', x: -29.5, z: 10, rot: 90, camX: -20, camZ: 10 },
-                // محطة العودة لإكمال الدورة والرجوع للباب
                 { type: 'return_waypoint', title: 'بوابة القاعة', desc: 'لقد أنهيت الجولة في هذه القاعة.', year: 'النهاية', x: 0, z: 29.5, rot: 180, camX: 0, camZ: 20 }
             ],
             'site3': [ 
@@ -501,7 +503,7 @@
                 } else {
                     window.currentRoomType = 'normal';
                     buildWhiteElegantRoom(pillarsContainer);
-                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها';
+                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم:</b><br>👆 إصبع واحد: التفات وإدارة المجسمات<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ نقرة واحدة: تقريب عميق للمجسم';
                     cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0');
                     document.getElementById('main-dir-light').setAttribute('intensity', '0.8');
                     spawnPillarsAndArtifacts(sitesData[siteId]); 
@@ -510,7 +512,7 @@
         }
 
         function startKouyunjikMode(data) {
-            document.getElementById('instructions').innerHTML = '<b>دليل الغرفة التاريخية:</b><br>↔️ استخدم السكرول للمشي بمحاذاة المعروضات<br>✌️ زووم للتقريب';
+            document.getElementById('instructions').innerHTML = '<b>دليل الغرفة التاريخية:</b><br>↔️ سكرول للمشي بمحاذاة المعروضات<br>🖱️ نقرة واحدة: تقريب عميق للمجسم';
             
             document.getElementById('main-dir-light').setAttribute('intensity', '0.4');
             document.getElementById('point-light').setAttribute('intensity', '0.5');
@@ -531,7 +533,6 @@
             let config = [];
 
             data.forEach((item, index) => {
-                // إذا كانت محطة عودة فقط لا ننشئ مجسماً
                 if(item.type === 'return_waypoint') {
                     config.push({ ...item, artY: 2.5 });
                     return;
@@ -546,6 +547,23 @@
 
                 let spot = document.createElement('a-light'); spot.setAttribute('type', 'spot'); spot.setAttribute('intensity', '0.6'); spot.setAttribute('angle', '40'); spot.setAttribute('position', '0 4 3'); spot.setAttribute('target', '#artifact-' + index); group.appendChild(spot);
 
+                let handleZoomClick = function() {
+                    let startZ = window.stairZoom || 0;
+                    let targetZ = -6.5; 
+                    let startTime = Date.now();
+                    let animateZoom = () => {
+                        let now = Date.now();
+                        let progress = (now - startTime) / 600; 
+                        if (progress > 1) progress = 1;
+                        let ease = 1 - Math.pow(1 - progress, 3);
+                        window.stairZoom = startZ + (targetZ - startZ) * ease;
+                        if (progress < 1) requestAnimationFrame(animateZoom);
+                    };
+                    animateZoom();
+                    infoPanel.style.display = 'none';
+                    setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 400);
+                };
+
                 if (item.type === 'door') {
                     let wall = document.createElement('a-box'); wall.setAttribute('width', '8'); wall.setAttribute('height', '7'); wall.setAttribute('depth', '0.2'); wall.setAttribute('color', '#1a1d21'); wall.setAttribute('position', '0 3.5 -0.1'); group.appendChild(wall);
                     let door = document.createElement('a-plane'); door.setAttribute('width', '3'); door.setAttribute('height', '4.5'); door.setAttribute('color', '#0a0a0c'); door.setAttribute('position', '0 2.25 -0.22'); group.appendChild(door);
@@ -553,18 +571,26 @@
                     artY = 2.5;
                 } else if (item.type === 'cube_artifact') {
                     let cube = document.createElement('a-box'); cube.setAttribute('width', '1.2'); cube.setAttribute('height', '1.2'); cube.setAttribute('depth', '1.2'); cube.setAttribute('color', '#495057'); cube.setAttribute('position', '0 0.6 0'); cube.setAttribute('material', 'roughness: 0.5; metalness: 0.3'); cube.setAttribute('shadow', 'cast: true; receive: true'); group.appendChild(cube);
-                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 1.5 0'); artifact.setAttribute('artifact-rotator', ''); group.appendChild(artifact);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 1.5 0'); 
+                    artifact.setAttribute('class', 'clickable'); artifact.setAttribute('artifact-rotator', ''); artifact.addEventListener('click', handleZoomClick);
+                    group.appendChild(artifact);
                     artY = 1.5;
                 } else if (item.type === 'panel') {
                     let frame = document.createElement('a-box'); frame.setAttribute('width', '4.5'); frame.setAttribute('height', '3.5'); frame.setAttribute('depth', '0.2'); frame.setAttribute('color', '#2b2d30'); frame.setAttribute('position', '0 2.5 -0.11'); group.appendChild(frame);
-                    let relief = document.createElement('a-image'); relief.setAttribute('id', 'artifact-' + index); relief.setAttribute('src', `url(${item.panel_img})`); relief.setAttribute('width', '4'); relief.setAttribute('height', '3'); relief.setAttribute('position', '0 2.5 -0.22'); group.appendChild(relief);
+                    let relief = document.createElement('a-image'); relief.setAttribute('id', 'artifact-' + index); relief.setAttribute('src', `url(${item.panel_img})`); relief.setAttribute('width', '4'); relief.setAttribute('height', '3'); relief.setAttribute('position', '0 2.5 -0.22'); 
+                    relief.setAttribute('class', 'clickable'); relief.addEventListener('click', handleZoomClick);
+                    group.appendChild(relief);
                     artY = 2.5;
                 } else if (item.type === 'sculpture') {
-                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 0.5 0'); artifact.setAttribute('shadow', 'cast: true; receive: true'); group.appendChild(artifact);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 0.5 0'); artifact.setAttribute('shadow', 'cast: true; receive: true'); 
+                    artifact.setAttribute('class', 'clickable'); artifact.setAttribute('artifact-rotator', ''); artifact.addEventListener('click', handleZoomClick);
+                    group.appendChild(artifact);
                     artY = 2.5;
                 } else if (item.type === 'hanging_pot') {
                     let stand = document.createElement('a-cylinder'); stand.setAttribute('radius', '0.05'); stand.setAttribute('height', '4'); stand.setAttribute('color', '#495057'); stand.setAttribute('position', '0 2 -0.11'); group.appendChild(stand);
-                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '1.5 1.5 1.5'); artifact.setAttribute('position', '0 2 -0.3'); group.appendChild(artifact);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '1.5 1.5 1.5'); artifact.setAttribute('position', '0 2 -0.3'); 
+                    artifact.setAttribute('class', 'clickable'); artifact.setAttribute('artifact-rotator', ''); artifact.addEventListener('click', handleZoomClick);
+                    group.appendChild(artifact);
                     artY = 2.0;
                 }
 
@@ -576,7 +602,7 @@
 
         function startStairsMode(data) {
             window.isStairsMode = true;
-            document.getElementById('instructions').innerHTML = '<b>دليل السجل الزمني:</b><br>↔️ استخدم السكرول للتنقل عبر الزمن<br>👀 زووم للتقريب';
+            document.getElementById('instructions').innerHTML = '<b>دليل السجل الزمني:</b><br>↔️ استخدم السكرول للتنقل<br>🖱️ نقرة واحدة: تقريب عميق للمجسم';
             document.getElementById('main-dir-light').setAttribute('intensity', '0.8');
 
             timelineSlider.max = data.length - 1; timelineSlider.value = 0; timelineSlider.step = 0.01; 
@@ -597,9 +623,28 @@
                 
                 let rotYarcade = (item.angle * 180 / Math.PI); pillarGroup.setAttribute('rotation', `0 ${rotYarcade} 0`); group.appendChild(pillarGroup);
 
+                let handleZoomClick = function() {
+                    let startZ = window.stairZoom || 0;
+                    let targetZ = -4.5; 
+                    let startTime = Date.now();
+                    let animateZoom = () => {
+                        let now = Date.now();
+                        let progress = (now - startTime) / 600; 
+                        if (progress > 1) progress = 1;
+                        let ease = 1 - Math.pow(1 - progress, 3);
+                        window.stairZoom = startZ + (targetZ - startZ) * ease;
+                        if (progress < 1) requestAnimationFrame(animateZoom);
+                    };
+                    animateZoom();
+                    infoPanel.style.display = 'none';
+                    setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 400);
+                };
+
                 if (item.model) {
                     let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); 
-                    let rotY = (item.angle * 180 / Math.PI); artifact.setAttribute('rotation', `0 ${rotY} 0`); artifact.setAttribute('position', `0 ${item.artY} 0`); artifact.setAttribute('artifact-rotator', ''); group.appendChild(artifact);
+                    let rotY = (item.angle * 180 / Math.PI); artifact.setAttribute('rotation', `0 ${rotY} 0`); artifact.setAttribute('position', `0 ${item.artY} 0`); 
+                    artifact.setAttribute('class', 'clickable'); artifact.setAttribute('artifact-rotator', ''); artifact.addEventListener('click', handleZoomClick);
+                    group.appendChild(artifact);
                 }
                 pillarsContainer.appendChild(group);
                 let delay = index * 150; group.setAttribute('animation', `property: scale; to: 1 1 1; dur: 1500; easing: easeOutBack; delay: ${delay}`);
@@ -614,22 +659,40 @@
                 pillarsContainer.appendChild(group);
                 let delay = index * 300; setTimeout(() => { group.setAttribute('animation', `property: position; to: ${item.x} 0.75 ${item.z}; dur: 1500; easing: easeOutElastic`); }, 400 + delay);
                 let handleClick = function() {
-                    cameraRig.removeAttribute('animation'); let dist = Math.sqrt(item.x * item.x + item.z * item.z); let ratio = (dist - 1.8) / dist; let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
+                    cameraRig.removeAttribute('animation'); let dist = Math.sqrt(item.x * item.x + item.z * item.z); 
+                    let ratio = (dist - 1.0) / dist; let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
                     cameraRig.setAttribute('animation', `property: position; to: ${zoomX} 1.6 ${zoomZ}; dur: 1500; easing: easeOutCubic`);
                     let targetVec = new THREE.Vector3(item.x, 1.25, item.z); cameraRig.object3D.lookAt(targetVec);
                     if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) { window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); }
                     let artifact = group.querySelector('a-entity[gltf-model]');
                     if (artifact) { artifact.setAttribute('artifact-rotator', ''); window.currentRotatingArtifact = artifact; window.currentArtifactOriginalRot = item.rot; }
-                    infoPanel.style.display = 'none'; setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 1200);
+                    infoPanel.style.display = 'none'; setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 400);
                 };
                 pillar.addEventListener('click', handleClick);
+                let artEl = group.querySelector('a-entity[gltf-model]');
+                if (artEl) artEl.addEventListener('click', handleClick);
             });
             if(data.length > 0) { let first = data[0]; let targetVec = new THREE.Vector3(first.x, 1.25, first.z); cameraRig.object3D.lookAt(targetVec); }
         }
 
         function closeInfoPanel() {
             infoPanel.style.display = 'none'; 
-            if(!window.isStairsMode && window.currentRoomType !== 'site2') cameraRig.setAttribute('animation', `property: position; to: 0 1.6 0; dur: 1500; easing: easeOutCubic`);
+            if(!window.isStairsMode && window.currentRoomType !== 'site2') {
+                cameraRig.setAttribute('animation', `property: position; to: 0 1.6 0; dur: 1500; easing: easeOutCubic`);
+            } else {
+                let startZ = window.stairZoom || 0;
+                let targetZ = 0; 
+                let startTime = Date.now();
+                let animateZoom = () => {
+                    let now = Date.now();
+                    let progress = (now - startTime) / 600; 
+                    if (progress > 1) progress = 1;
+                    let ease = 1 - Math.pow(1 - progress, 3);
+                    window.stairZoom = startZ + (targetZ - startZ) * ease;
+                    if (progress < 1) requestAnimationFrame(animateZoom);
+                };
+                animateZoom();
+            }
             if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) { window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); window.currentRotatingArtifact = null; }
         }
 
