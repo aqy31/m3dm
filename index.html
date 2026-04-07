@@ -151,7 +151,6 @@
                     this.isDragging = true; 
                     window.isArtifactDragging = true; 
                     this.previousX = evt.clientX || (evt.touches && evt.touches[0] ? evt.touches[0].clientX : 0);
-                    // تجميد الكاميرا دائماً وفي كل الغرف عند النقر على المجسم
                     if(this.camera) this.camera.setAttribute('look-controls', 'enabled', false);
                 };
                 this.onMove = (e) => {
@@ -170,7 +169,6 @@
                 this.onUp = () => { 
                     if(this.isDragging) { 
                         this.isDragging = false; window.isArtifactDragging = false; 
-                        // إعادة تشغيل الكاميرا عند إفلات المجسم
                         if(this.camera) this.camera.setAttribute('look-controls', 'enabled', true); 
                     } 
                 };
@@ -254,8 +252,11 @@
 
                     currentCamX += dirX * (-zoom);
                     currentCamZ += dirZ * (-zoom);
+                    
+                    // الإضافة الجديدة: التحكم بارتفاع الكاميرا عند الزووم
+                    let camY = 1.6 + (window.stairPanY || 0);
 
-                    this.el.setAttribute('position', `${currentCamX} 1.6 ${currentCamZ}`);
+                    this.el.setAttribute('position', `${currentCamX} ${camY} ${currentCamZ}`);
                     
                     let targetVec = new THREE.Vector3(artX, artY, artZ);
                     let m = new THREE.Matrix4();
@@ -273,7 +274,9 @@
 
                     let camX = camR * Math.sin(currentAngle);
                     let camZ = -camR * Math.cos(currentAngle);
-                    let camY = currentH + 1.0; 
+                    
+                    // الإضافة الجديدة: التحكم بارتفاع الكاميرا عند الزووم
+                    let camY = currentH + 1.0 + (window.stairPanY || 0);
 
                     this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
                     
@@ -332,7 +335,16 @@
                     if (this.active && e.touches.length === 2) {
                         let cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                         let dx = cx - this.lastX, dy = cy - this.lastY; this.lastX = cx; this.lastY = cy; 
-                        if (!window.isStairsMode && window.currentRoomType !== 'site2') this.pan(-dx, dy); 
+                        
+                        if (!window.isStairsMode && window.currentRoomType !== 'site2') {
+                            this.pan(-dx, dy); 
+                        } else {
+                            // الإضافة الجديدة: رفع وخفض الكاميرا بإصبعين
+                            window.stairPanY = (window.stairPanY || 0) - dy * 0.008;
+                            if(window.stairPanY > 5) window.stairPanY = 5;
+                            if(window.stairPanY < -2) window.stairPanY = -2;
+                        }
+
                         let currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                         let distDelta = currentDist - initialDist; initialDist = currentDist; 
                         if (window.isStairsMode || window.currentRoomType === 'site2') { window.stairZoom = (window.stairZoom || 0) - distDelta * 0.01; } else { this.zoom(distDelta * -0.005); }
@@ -380,7 +392,7 @@
 
     <div id="controls-ui">
         <div id="instructions">
-            <b>دليل التحكم:</b><br>👆 إصبع واحد: التفات وإدارة المجسمات<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ نقرة واحدة: تقريب عميق للمجسم
+            <b>دليل التحكم:</b><br>👆 إصبع واحد: التفات وإدارة المجسمات<br>✌️ إصبعين: مشي وزووم للتقريب (وللأعلى/الأسفل)<br>🖱️ نقرة واحدة: تقريب عميق للمجسم (دبل كليك للرجوع)
         </div>
         <div style="display: flex; gap: 10px;">
             <button id="hide-ui-btn" class="circle-btn" onclick="toggleUI()" title="إخفاء/إظهار الواجهة">
@@ -560,7 +572,17 @@
 
                 let spot = document.createElement('a-light'); spot.setAttribute('type', 'spot'); spot.setAttribute('intensity', '0.6'); spot.setAttribute('angle', '40'); spot.setAttribute('position', '0 4 3'); spot.setAttribute('target', '#artifact-' + index); group.appendChild(spot);
 
+                // الإضافة الجديدة: دبل كليك يرجع الكاميرا
+                let lastClickTime = 0;
                 let handleZoomClick = function() {
+                    let now = Date.now();
+                    if (now - lastClickTime < 400) {
+                        closeInfoPanel();
+                        lastClickTime = 0;
+                        return;
+                    }
+                    lastClickTime = now;
+
                     let startZ = window.stairZoom || 0;
                     let targetZ = -6.5; 
                     let startTime = Date.now();
@@ -636,7 +658,17 @@
                 
                 let rotYarcade = (item.angle * 180 / Math.PI); pillarGroup.setAttribute('rotation', `0 ${rotYarcade} 0`); group.appendChild(pillarGroup);
 
+                // الإضافة الجديدة: دبل كليك يرجع الكاميرا
+                let lastClickTime = 0;
                 let handleZoomClick = function() {
+                    let now = Date.now();
+                    if (now - lastClickTime < 400) {
+                        closeInfoPanel();
+                        lastClickTime = 0;
+                        return;
+                    }
+                    lastClickTime = now;
+
                     let startZ = window.stairZoom || 0;
                     let targetZ = -4.5; 
                     let startTime = Date.now();
@@ -671,7 +703,18 @@
                 if (item.model) { let artifact = document.createElement('a-entity'); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('rotation', item.rot); artifact.setAttribute('position', '0 0.75 0'); artifact.setAttribute('class', 'clickable'); group.appendChild(artifact); }
                 pillarsContainer.appendChild(group);
                 let delay = index * 300; setTimeout(() => { group.setAttribute('animation', `property: position; to: ${item.x} 0.75 ${item.z}; dur: 1500; easing: easeOutElastic`); }, 400 + delay);
+                
+                // الإضافة الجديدة: دبل كليك للرجوع بالغرف البيضاء العادية
+                let lastClickTime = 0;
                 let handleClick = function() {
+                    let now = Date.now();
+                    if (now - lastClickTime < 400) {
+                        closeInfoPanel();
+                        lastClickTime = 0;
+                        return;
+                    }
+                    lastClickTime = now;
+
                     cameraRig.removeAttribute('animation'); let dist = Math.sqrt(item.x * item.x + item.z * item.z); 
                     let ratio = (dist - 1.0) / dist; let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
                     cameraRig.setAttribute('animation', `property: position; to: ${zoomX} 1.6 ${zoomZ}; dur: 1500; easing: easeOutCubic`);
@@ -705,6 +748,7 @@
             } else {
                 let startZ = window.stairZoom || 0;
                 let targetZ = 0; 
+                let startY = window.stairPanY || 0;
                 let startTime = Date.now();
                 let animateZoom = () => {
                     let now = Date.now();
@@ -712,6 +756,8 @@
                     if (progress > 1) progress = 1;
                     let ease = 1 - Math.pow(1 - progress, 3);
                     window.stairZoom = startZ + (targetZ - startZ) * ease;
+                    // تصفير الارتفاع عند الرجوع
+                    window.stairPanY = startY * (1 - ease);
                     if (progress < 1) requestAnimationFrame(animateZoom);
                 };
                 animateZoom();
@@ -726,7 +772,8 @@
             let eyeIcon = document.getElementById('eye-icon'); if(eyeIcon) eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             let camEl = document.querySelector('#cam');
             if(camEl) { camEl.setAttribute('look-controls', 'enabled', true); camEl.object3D.rotation.set(0, 0, 0); if(camEl.components['look-controls']) { camEl.components['look-controls'].yawObject.rotation.set(0,0,0); camEl.components['look-controls'].pitchObject.rotation.set(0,0,0); } }
-            controlsUI.style.display = 'none'; infoPanel.style.display = 'none'; document.getElementById('instructions').style.opacity = '1'; pillarsContainer.innerHTML = ''; cameraRig.removeAttribute('animation'); cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0'); window.currentRotatingArtifact = null; window.currentArtifactOriginalRot = null; window.stairZoom = 0; 
+            controlsUI.style.display = 'none'; infoPanel.style.display = 'none'; document.getElementById('instructions').style.opacity = '1'; pillarsContainer.innerHTML = ''; cameraRig.removeAttribute('animation'); cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0'); 
+            window.currentRotatingArtifact = null; window.currentArtifactOriginalRot = null; window.stairZoom = 0; window.stairPanY = 0; 
         }
     </script>
 </body>
