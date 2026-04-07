@@ -55,12 +55,9 @@
             height: auto;
             pointer-events: none; 
             transition: all 0.3s ease;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.8)); 
         }
 
         .map-pin:hover { transform: translate(-50%, -50%) scale(1.15); z-index: 10; }
-        .map-pin:hover .pin-img { filter: drop-shadow(0 10px 25px rgba(238, 155, 0, 0.8)); }
-        .map-pin:active { transform: translate(-50%, -50%) scale(0.85) !important; }
 
         #controls-ui {
             position: absolute; top: 20px; left: 20px; right: 20px; z-index: 101;
@@ -102,7 +99,6 @@
         }
         #close-info-btn:hover { background: #ccc; color: #000; }
 
-        /* التايم لاين الجديد (نُقل للأعلى وتم تعديل ألوانه لتناسب الثيم الفاتح) */
         #timeline-ui {
             position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
             width: 80%; max-width: 500px; display: none; z-index: 105;
@@ -126,7 +122,8 @@
     <script>
         window.isUIHidden = false;
         window.isArtifactDragging = false; 
-        
+        window.currentRoomType = ''; 
+
         function toggleUI(forceState) {
             window.isUIHidden = typeof forceState === 'boolean' ? forceState : !window.isUIHidden;
             const info = document.getElementById('info-panel');
@@ -136,12 +133,11 @@
             
             if (window.isUIHidden) {
                 info.style.display = 'none'; inst.style.opacity = '0';
-                if (window.isStairsMode && timelineUI) timelineUI.style.opacity = '0';
                 eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
             } else {
-                if (window.currentRotatingArtifact || window.isStairsMode) info.style.display = 'block';
+                if (window.currentRotatingArtifact || window.isStairsMode || window.currentRoomType === 'site2') info.style.display = 'block';
                 inst.style.opacity = '1';
-                if (window.isStairsMode && timelineUI) timelineUI.style.opacity = '1';
+                if ((window.isStairsMode || window.currentRoomType === 'site2') && timelineUI) timelineUI.style.opacity = '1';
                 eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             }
         }
@@ -155,16 +151,16 @@
                     this.isDragging = true; 
                     window.isArtifactDragging = true; 
                     this.previousX = evt.clientX || (evt.touches && evt.touches[0] ? evt.touches[0].clientX : 0);
-                    if(this.camera && !window.isStairsMode) this.camera.setAttribute('look-controls', 'enabled', false);
+                    if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', false);
                 };
                 this.onMove = (e) => {
                     if (!this.isDragging) return;
-                    if (e.touches && e.touches.length > 1) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode) this.camera.setAttribute('look-controls', 'enabled', true); return; }
+                    if (e.touches && e.touches.length > 1) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); return; }
                     let clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : undefined);
                     if(clientX === undefined) return;
                     let deltaX = clientX - this.previousX; this.el.object3D.rotation.y += deltaX * 0.015; this.previousX = clientX;
                 };
-                this.onUp = () => { if(this.isDragging) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode) this.camera.setAttribute('look-controls', 'enabled', true); } };
+                this.onUp = () => { if(this.isDragging) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); } };
                 this.el.addEventListener('mousedown', this.onDown); window.addEventListener('mousemove', this.onMove);
                 window.addEventListener('mouseup', this.onUp); window.addEventListener('touchmove', this.onMove, {passive: true}); window.addEventListener('touchend', this.onUp);
             },
@@ -172,95 +168,117 @@
             remove: function () {
                 this.el.removeEventListener('mousedown', this.onDown); window.removeEventListener('mousemove', this.onMove);
                 window.removeEventListener('mouseup', this.onUp); window.removeEventListener('touchmove', this.onMove); window.removeEventListener('touchend', this.onUp);
-                if(this.camera && !window.isStairsMode) this.camera.setAttribute('look-controls', 'enabled', true);
+                if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true);
             }
         });
 
-        // بناء الغرفة الفخمة البيضاء والرصاصية مع تفعيل استقبال الظلال
         function buildWhiteElegantRoom(container) {
+            pillarsContainer.setAttribute('data-room-type', 'white'); 
+            let room = document.createElement('a-entity');
+            let floor = document.createElement('a-plane'); floor.setAttribute('rotation', '-90 0 0'); floor.setAttribute('width', '80'); floor.setAttribute('height', '80'); floor.setAttribute('color', '#e9ecef'); floor.setAttribute('material', 'roughness: 0.4; metalness: 0.1'); room.appendChild(floor);
+            let ceil = document.createElement('a-plane'); ceil.setAttribute('rotation', '90 0 0'); ceil.setAttribute('width', '80'); ceil.setAttribute('height', '80'); ceil.setAttribute('color', '#ffffff'); ceil.setAttribute('position', '0 18 0'); room.appendChild(ceil);
+            const walls = [ { x: 0, y: 9, z: -40, rotY: 0 }, { x: 0, y: 9, z: 40, rotY: 180 }, { x: -40, y: 9, z: 0, rotY: 90 }, { x: 40, y: 9, z: 0, rotY: -90 } ];
+            walls.forEach(w => {
+                let wall = document.createElement('a-plane'); wall.setAttribute('width', '80'); wall.setAttribute('height', '18'); wall.setAttribute('color', '#f8f9fa'); wall.setAttribute('material', 'roughness: 0.9; metalness: 0.0'); wall.setAttribute('rotation', `0 ${w.rotY} 0`); wall.setAttribute('position', `${w.x} ${w.y} ${w.z}`); room.appendChild(wall);
+                let bottomTrim = document.createElement('a-box'); bottomTrim.setAttribute('width', '80'); bottomTrim.setAttribute('height', '0.4'); bottomTrim.setAttribute('depth', '0.2'); bottomTrim.setAttribute('color', '#adb5bd'); bottomTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2'); bottomTrim.setAttribute('position', `${w.x * 0.99} 0.2 ${w.z * 0.99}`); bottomTrim.setAttribute('rotation', `0 ${w.rotY} 0`); room.appendChild(bottomTrim);
+                let topTrim = document.createElement('a-box'); topTrim.setAttribute('width', '80'); topTrim.setAttribute('height', '0.6'); topTrim.setAttribute('depth', '0.4'); topTrim.setAttribute('color', '#ced4da'); topTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2'); topTrim.setAttribute('position', `${w.x * 0.99} 17.7 ${w.z * 0.99}`); topTrim.setAttribute('rotation', `0 ${w.rotY} 0`); room.appendChild(topTrim);
+            });
+            container.appendChild(room);
+        }
+
+        // بناء الغرفة الداكنة لقوينجق (Site 2)
+        function buildKouyunjikDarkRoom(container) {
+            pillarsContainer.setAttribute('data-room-type', 'dark_kouyunjik'); 
             let room = document.createElement('a-entity');
             
-            // أرضية رصاصية فاتحة جداً تستقبل الظل
-            let floor = document.createElement('a-plane');
-            floor.setAttribute('rotation', '-90 0 0'); floor.setAttribute('width', '80'); floor.setAttribute('height', '80');
-            floor.setAttribute('color', '#e9ecef'); floor.setAttribute('material', 'roughness: 0.4; metalness: 0.1'); 
-            floor.setAttribute('shadow', 'receive: true');
-            room.appendChild(floor);
-
-            // سقف أبيض
-            let ceil = document.createElement('a-plane');
-            ceil.setAttribute('rotation', '90 0 0'); ceil.setAttribute('width', '80'); ceil.setAttribute('height', '80');
-            ceil.setAttribute('color', '#ffffff'); ceil.setAttribute('position', '0 18 0');
-            room.appendChild(ceil);
-
-            // جدران بيضاء ورصاصية فاتحة
-            const walls = [ { x: 0, y: 9, z: -40, rotY: 0 }, { x: 0, y: 9, z: 40, rotY: 180 }, { x: -40, y: 9, z: 0, rotY: 90 }, { x: 40, y: 9, z: 0, rotY: -90 } ];
-
+            let floor = document.createElement('a-plane'); floor.setAttribute('rotation', '-90 0 0'); floor.setAttribute('width', '60'); floor.setAttribute('height', '60'); floor.setAttribute('color', '#212529'); floor.setAttribute('material', 'roughness: 0.6; metalness: 0.2'); room.appendChild(floor);
+            let ceil = document.createElement('a-plane'); ceil.setAttribute('rotation', '90 0 0'); ceil.setAttribute('width', '60'); ceil.setAttribute('height', '60'); ceil.setAttribute('color', '#1a1d21'); ceil.setAttribute('position', '0 15 0'); room.appendChild(ceil);
+            
+            const walls = [ { x: 0, y: 7.5, z: -30, rotY: 0 }, { x: 0, y: 7.5, z: 30, rotY: 180 }, { x: -30, y: 7.5, z: 0, rotY: 90 }, { x: 30, y: 7.5, z: 0, rotY: -90 } ];
             walls.forEach(w => {
-                let wall = document.createElement('a-plane');
-                wall.setAttribute('width', '80'); wall.setAttribute('height', '18');
-                wall.setAttribute('color', '#f8f9fa'); wall.setAttribute('material', 'roughness: 0.9; metalness: 0.0');
-                wall.setAttribute('rotation', `0 ${w.rotY} 0`); wall.setAttribute('position', `${w.x} ${w.y} ${w.z}`);
-                wall.setAttribute('shadow', 'receive: true');
-                room.appendChild(wall);
-
-                // إطارات رصاصية داكنة للزينة بدل الذهبي
-                let bottomTrim = document.createElement('a-box');
-                bottomTrim.setAttribute('width', '80'); bottomTrim.setAttribute('height', '0.4'); bottomTrim.setAttribute('depth', '0.2');
-                bottomTrim.setAttribute('color', '#adb5bd'); bottomTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2');
-                bottomTrim.setAttribute('position', `${w.x * 0.99} 0.2 ${w.z * 0.99}`); bottomTrim.setAttribute('rotation', `0 ${w.rotY} 0`);
-                room.appendChild(bottomTrim);
-                
-                let topTrim = document.createElement('a-box');
-                topTrim.setAttribute('width', '80'); topTrim.setAttribute('height', '0.6'); topTrim.setAttribute('depth', '0.4');
-                topTrim.setAttribute('color', '#ced4da'); topTrim.setAttribute('material', 'roughness: 0.5; metalness: 0.2');
-                topTrim.setAttribute('position', `${w.x * 0.99} 17.7 ${w.z * 0.99}`); topTrim.setAttribute('rotation', `0 ${w.rotY} 0`);
-                room.appendChild(topTrim);
+                let wall = document.createElement('a-plane'); wall.setAttribute('width', '60'); wall.setAttribute('height', '15'); wall.setAttribute('color', '#1a1d21'); wall.setAttribute('material', 'roughness: 0.9; metalness: 0.1'); wall.setAttribute('rotation', `0 ${w.rotY} 0`); wall.setAttribute('position', `${w.x} ${w.y} ${w.z}`); room.appendChild(wall);
+                let trim = document.createElement('a-box'); trim.setAttribute('width', '60'); trim.setAttribute('height', '0.2'); trim.setAttribute('depth', '0.3'); trim.setAttribute('color', '#495057'); trim.setAttribute('position', `${w.x * 0.995} 0.1 ${w.z * 0.995}`); trim.setAttribute('rotation', `0 ${w.rotY} 0`); room.appendChild(trim);
             });
-
             container.appendChild(room);
         }
 
         window.isStairsMode = false;
-        let targetStairProgress = 0;
-        let currentStairProgress = 0;
-        let maxStairProgress = 0;
+        let targetStairProgress = 0, currentStairProgress = 0, maxStairProgress = 0;
+        let site2TargetProgress = 0, site2CurrentProgress = 0; 
 
         AFRAME.registerComponent('stairs-manager', {
             tick: function () {
-                if (!window.isStairsMode || !window.currentStairsConfig) return;
+                if (window.isStairsMode && window.currentStairsConfig) {
+                    currentStairProgress += (targetStairProgress - currentStairProgress) * 0.1;
+                    this.moveCameraDirect(currentStairProgress, window.currentStairsConfig);
+                } else if (window.currentRoomType === 'site2' && window.currentRoomConfig) {
+                    site2CurrentProgress += (site2TargetProgress - site2CurrentProgress) * 0.1;
+                    this.moveCameraDirect(site2CurrentProgress, window.currentRoomConfig);
+                } else { return; }
+            },
+            moveCameraDirect: function(progress, config) {
+                let idx1 = Math.floor(progress);
+                let idx2 = Math.min(idx1 + 1, config.length - 1);
+                let t = progress - idx1; 
+                let c1 = config[idx1], c2 = config[idx2];
                 
-                currentStairProgress += (targetStairProgress - currentStairProgress) * 0.1;
-                
-                let idx1 = Math.floor(currentStairProgress);
-                let idx2 = Math.min(idx1 + 1, maxStairProgress);
-                let t = currentStairProgress - idx1; 
-                
-                let c1 = window.currentStairsConfig[idx1];
-                let c2 = window.currentStairsConfig[idx2];
-                
-                let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
-                let currentArtH = c1.pillarH + (c2.pillarH - c1.pillarH) * t;
-                
-                let camR = 7.0; 
-                let camX = camR * Math.sin(currentAngle);
-                let camZ = -camR * Math.cos(currentAngle);
-                let camY = currentArtH + 1.0; 
-                
-                this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
-                
-                // التعديل الذكي: توجيه الكاميرا للمجسم مع السماح لك بالالتفات
-                let artX = 4.0 * Math.sin(currentAngle);
-                let artZ = -4.0 * Math.cos(currentAngle);
-                let targetVec = new THREE.Vector3(artX, currentArtH + 0.5, artZ);
-                this.el.object3D.lookAt(targetVec); // يوجه المسار الأساسي، بس look-controls يبقى شغال للإصبع!
-                
-                let closest = Math.round(currentStairProgress);
-                if (window.lastShownStairText !== closest) {
-                    window.lastShownStairText = closest;
-                    document.getElementById('info-title').innerText = window.currentStairsConfig[closest].title;
-                    document.getElementById('info-desc').innerText = window.currentStairsConfig[closest].desc;
-                    document.getElementById('timeline-year').innerText = window.currentStairsConfig[closest].year;
+                if (window.currentRoomType === 'site2') {
+                    // حركة الكاميرا الفعلية بخط مستقيم بين القطع والمحطات (Walkthrough)
+                    let currentCamX = c1.camX + (c2.camX - c1.camX) * t;
+                    let currentCamZ = c1.camZ + (c2.camZ - c1.camZ) * t;
+                    
+                    let artX = c1.x + (c2.x - c1.x) * t;
+                    let artZ = c1.z + (c2.z - c1.z) * t;
+                    let artY = c1.artY + (c2.artY - c1.artY) * t;
+
+                    // حساب الزووم لتقريب وتبعيد الكاميرا
+                    let dirX = artX - currentCamX;
+                    let dirZ = artZ - currentCamZ;
+                    let len = Math.sqrt(dirX*dirX + dirZ*dirZ);
+                    if(len > 0) { dirX /= len; dirZ /= len; }
+
+                    let zoom = window.stairZoom || 0; 
+                    if (zoom < -5) zoom = -5; // أقصى حد للتقريب للأمام
+                    if (zoom > 5) zoom = 5;   // أقصى حد للرجوع للخلف
+                    window.stairZoom = zoom;
+
+                    currentCamX += dirX * (-zoom);
+                    currentCamZ += dirZ * (-zoom);
+
+                    this.el.setAttribute('position', `${currentCamX} 1.6 ${currentCamZ}`);
+                    
+                    // توجيه الكاميرا نحو القطعة دائماً أثناء المشي
+                    let targetVec = new THREE.Vector3(artX, artY, artZ);
+                    this.el.object3D.lookAt(targetVec);
+
+                } else {
+                    // حركة دائرية للحدباء (السلم الزمني)
+                    let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
+                    let currentH = c1.artY + (c2.artY - c1.artY) * t; 
+                    
+                    let defaultCamR = 7.0;
+                    let camR = defaultCamR + (window.stairZoom || 0); 
+                    if (camR < 2.0) { camR = 2.0; window.stairZoom = 2.0 - 7.0; }
+                    if (camR > 15.0) { camR = 15.0; window.stairZoom = 15.0 - 7.0; }
+
+                    let camX = camR * Math.sin(currentAngle);
+                    let camZ = -camR * Math.cos(currentAngle);
+                    let camY = currentH + 1.0; 
+
+                    this.el.setAttribute('position', `${camX} ${camY} ${camZ}`);
+                    
+                    let artX = 4.0 * Math.sin(currentAngle);
+                    let artZ = -4.0 * Math.cos(currentAngle);
+                    let targetVec = new THREE.Vector3(artX, currentH + 0.5, artZ);
+                    this.el.object3D.lookAt(targetVec);
+                }
+
+                let closest = Math.round(progress);
+                if (window.lastShownTextIdx !== closest) {
+                    window.lastShownTextIdx = closest;
+                    document.getElementById('info-title').innerText = config[closest].title;
+                    document.getElementById('info-desc').innerText = config[closest].desc;
+                    document.getElementById('timeline-year').innerText = config[closest].year;
                     if (!window.isUIHidden) document.getElementById('info-panel').style.display = 'block';
                 }
             }
@@ -268,7 +286,11 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('timeline-slider').addEventListener('input', function(e) {
-                targetStairProgress = parseFloat(e.target.value);
+                if (window.isStairsMode) {
+                    targetStairProgress = parseFloat(e.target.value);
+                } else if (window.currentRoomType === 'site2') {
+                    site2TargetProgress = parseFloat(e.target.value);
+                }
             });
         });
 
@@ -279,43 +301,37 @@
                 document.addEventListener('contextmenu', e => e.preventDefault());
                 document.addEventListener('mousedown', (e) => { if (e.button === 2 || e.button === 1) { this.active = true; this.lastX = e.clientX; this.lastY = e.clientY; } });
                 document.addEventListener('mouseup', () => this.active = false);
-                document.addEventListener('mousemove', (e) => { if (!this.active || window.isStairsMode) return; let dx = e.clientX - this.lastX, dy = e.clientY - this.lastY; this.lastX = e.clientX; this.lastY = e.clientY; this.pan(-dx, dy); });
+                document.addEventListener('mousemove', (e) => { if (!this.active || window.isStairsMode || window.currentRoomType === 'site2') return; let dx = e.clientX - this.lastX, dy = e.clientY - this.lastY; this.lastX = e.clientX; this.lastY = e.clientY; this.pan(-dx, dy); });
 
                 let initialDist = 0;
                 document.addEventListener('touchstart', (e) => {
-                    if (e.touches.length === 2 && !window.isStairsMode) {
+                    if (e.touches.length === 2) {
                         this.active = true; this.lastX = (e.touches[0].clientX + e.touches[1].clientX) / 2; this.lastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                         initialDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     }
                 });
                 document.addEventListener('touchmove', (e) => {
-                    if (this.active && e.touches.length === 2 && !window.isStairsMode) {
+                    if (this.active && e.touches.length === 2) {
                         let cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                        let dx = cx - this.lastX, dy = cy - this.lastY; this.lastX = cx; this.lastY = cy; this.pan(-dx, dy); 
+                        let dx = cx - this.lastX, dy = cy - this.lastY; this.lastX = cx; this.lastY = cy; 
+                        if (!window.isStairsMode && window.currentRoomType !== 'site2') this.pan(-dx, dy); 
                         let currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                        let distDelta = currentDist - initialDist; initialDist = currentDist; this.zoom(distDelta * -0.005); 
+                        let distDelta = currentDist - initialDist; initialDist = currentDist; 
+                        if (window.isStairsMode || window.currentRoomType === 'site2') { window.stairZoom = (window.stairZoom || 0) - distDelta * 0.01; } else { this.zoom(distDelta * -0.005); }
                     }
                 });
                 document.addEventListener('touchend', () => this.active = false);
-                document.addEventListener('wheel', (e) => { if(!window.isStairsMode) this.zoom(e.deltaY * 0.02); });
+                document.addEventListener('wheel', (e) => { 
+                    if(window.isStairsMode || window.currentRoomType === 'site2') { window.stairZoom = (window.stairZoom || 0) + e.deltaY * 0.02; } 
+                    else { this.zoom(e.deltaY * 0.02); } 
+                });
             },
             pan: function(dx, dy) { 
-                if (!this.camera) return; 
-                let camRot = this.camera.object3D.rotation; 
-                let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); 
-                v.applyEuler(camRot); 
-                this.el.object3D.position.add(v); 
-                toggleUI(true); 
+                if (!this.camera) return; let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(dx * this.data.speed, -dy * this.data.speed, 0); v.applyEuler(camRot); this.el.object3D.position.add(v); toggleUI(true); 
             },
             zoom: function(dz) {
-                if (!this.camera) return; this.el.removeAttribute('animation'); 
-                let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(0, 0, dz); v.applyEuler(camRot); this.el.object3D.position.add(v);
-                
-                if (dz < -0.001) { 
-                    toggleUI(true); 
-                } else if (dz > 0.001) { 
-                    toggleUI(false); 
-                }
+                if (!this.camera) return; this.el.removeAttribute('animation'); let camRot = this.camera.object3D.rotation; let v = new THREE.Vector3(0, 0, dz); v.applyEuler(camRot); this.el.object3D.position.add(v);
+                if (dz < -0.001) { toggleUI(true); } else if (dz > 0.001) { toggleUI(false); }
             }
         });
     </script>
@@ -359,8 +375,8 @@
     </div>
 
     <div id="timeline-ui">
-        <span id="timeline-year">1127</span>
-        <input type="range" id="timeline-slider" min="0" max="5" value="0" step="0.01">
+        <span id="timeline-year">القطعة</span>
+        <input type="range" id="timeline-slider" min="0" max="1" value="0" step="1">
     </div>
 
     <div id="info-panel">
@@ -373,8 +389,10 @@
         
         <a-sky src="ancient_mosul_sky.jpg"></a-sky> 
 
-        <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
-        <a-light type="directional" intensity="0.8" position="-2 6 4" castShadow="true"></a-light>
+        <a-light type="ambient" color="#f4f4f9" intensity="0.6"></a-light>
+        <a-light id="main-dir-light" type="directional" color="#ffffff" intensity="0.8" position="-1 5 2"></a-light>
+        <a-light type="directional" color="#fff0dd" intensity="0.4" position="2 4 -3"></a-light>
+        <a-light id="point-light" type="point" color="#ffffff" intensity="0.3" position="0 2 0"></a-light>
 
         <a-entity id="cameraRig" position="0 1.6 0" blender-controls stairs-manager>
             <a-camera id="cam" look-controls></a-camera>
@@ -389,7 +407,7 @@
         const mapHeight = 1600;
         
         let minScale = Math.max(window.innerWidth / mapWidth, window.innerHeight / mapHeight);
-        let scale = minScale; 
+        let scale = minScale * 1.5; 
         let pointX = 0, pointY = 0;
         let mapPanning = false, mapStart = { x: 0, y: 0 };
         
@@ -400,78 +418,51 @@
             if (pointY > maxPanY) pointY = maxPanY; if (pointY < -maxPanY) pointY = -maxPanY;
         }
 
-        function updateMapTransform() { 
-            clampMap(); 
-            mapContent.style.transform = `translate(calc(-50% + ${pointX}px), calc(-50% + ${pointY}px)) scale(${scale})`; 
-        }
-
-        window.addEventListener('resize', () => {
-            minScale = Math.max(window.innerWidth / mapWidth, window.innerHeight / mapHeight);
-            if (scale < minScale) scale = minScale;
-            updateMapTransform();
-        });
-
+        function updateMapTransform() { clampMap(); mapContent.style.transform = `translate(calc(-50% + ${pointX}px), calc(-50% + ${pointY}px)) scale(${scale})`; }
+        window.addEventListener('resize', () => { minScale = Math.max(window.innerWidth / mapWidth, window.innerHeight / mapHeight); if (scale < minScale) scale = minScale; updateMapTransform(); });
         updateMapTransform(); 
         
-        mapContent.addEventListener('mousedown', function(e) { 
-            e.preventDefault(); mapPanning = true; 
-            mapStart = { x: e.clientX - pointX, y: e.clientY - pointY }; 
-        });
-        window.addEventListener('mousemove', function(e) { 
-            if (!mapPanning) return; 
-            pointX = e.clientX - mapStart.x; pointY = e.clientY - mapStart.y; updateMapTransform(); 
-        });
+        mapContent.addEventListener('mousedown', function(e) { e.preventDefault(); mapPanning = true; mapStart = { x: e.clientX - pointX, y: e.clientY - pointY }; });
+        window.addEventListener('mousemove', function(e) { if (!mapPanning) return; pointX = e.clientX - mapStart.x; pointY = e.clientY - mapStart.y; updateMapTransform(); });
         window.addEventListener('mouseup', function() { mapPanning = false; });
-        
-        mapContent.addEventListener('touchstart', function(e) { 
-            mapPanning = true; 
-            mapStart = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY }; 
-        }, {passive: false});
-
-        window.addEventListener('touchmove', function(e) { 
-            if (!mapPanning) return; 
-            e.preventDefault(); 
-            pointX = e.touches[0].clientX - mapStart.x; 
-            pointY = e.touches[0].clientY - mapStart.y; 
-            updateMapTransform(); 
-        }, {passive: false});
-
+        mapContent.addEventListener('touchstart', function(e) { mapPanning = true; mapStart = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY }; }, {passive: false});
+        window.addEventListener('touchmove', function(e) { if (!mapPanning) return; e.preventDefault(); pointX = e.touches[0].clientX - mapStart.x; pointY = e.touches[0].clientY - mapStart.y; updateMapTransform(); }, {passive: false});
         window.addEventListener('touchend', function() { mapPanning = false; });
+        mapContent.addEventListener('wheel', function(e) { e.preventDefault(); let delta = (e.wheelDelta ? e.wheelDelta : -e.deltaY); (delta > 0) ? (scale *= 1.1) : (scale /= 1.1); scale = Math.min(Math.max(minScale, scale), 3); updateMapTransform(); }, {passive: false});
 
-        mapContent.addEventListener('wheel', function(e) {
-            e.preventDefault(); 
-            let delta = (e.wheelDelta ? e.wheelDelta : -e.deltaY); 
-            (delta > 0) ? (scale *= 1.1) : (scale /= 1.1);
-            scale = Math.min(Math.max(minScale, scale), 3); 
-            updateMapTransform();
-        }, {passive: false});
-
+        // بيانات الغرفة - تمت إضافة مسار السير الفعلي كـ X و Z لكل قطعة ومكان الكاميرا
         const sitesData = {
             'site1': [ 
-                { id: 'p1', model: './models/winged_bull.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 45 0', title: 'الثور المجنح (لاماسو)', desc: 'تمثال ضخم برأس إنسان وجسد ثور.' },
-                { id: 'p2', model: './models/ashurbanipal.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'الملك آشور بانيبال', desc: 'آخر الملوك العظماء للإمبراطورية الآشورية الحديثة.' },
-                { id: 'p3', model: './models/cuneiform_tablet.glb', x: 4, z: -4, scale: '1 1 1', rot: '0 -45 0', title: 'لوح مسماري', desc: 'لوح طيني نُقش عليه بالكتابة المسمارية.' }
+                { id: 'p1', model: './models/winged_bull.glb', x: -4, z: -4, scale: '2.5 2.5 2.5', rot: '0 45 0', title: 'الثور المجنح (لاماسو)', desc: 'تمثال ضخم برأس إنسان وجسد ثور.' },
+                { id: 'p2', model: './models/ashurbanipal.glb', x: 0, z: -6, scale: '2.5 2.5 2.5', rot: '0 0 0', title: 'الملك آشور بانيبال', desc: 'آخر الملوك العظماء للإمبراطورية الآشورية الحديثة.' },
+                { id: 'p3', model: './models/cuneiform_tablet.glb', x: 4, z: -4, scale: '2.5 2.5 2.5', rot: '0 -45 0', title: 'لوح مسماري', desc: 'لوح طيني نُقش عليه بالكتابة المسمارية.' }
             ],
             'site2': [ 
-                { id: 'p4', model: './models/nimrud_obelisk.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 0 0', title: 'المسلة السوداء', desc: 'مسلة تاريخية للملك شلمنصر الثالث.' },
-                { id: 'p5', model: './models/spring_girl.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'تمثال فتاة الربيع', desc: 'أحد الرموز الحديثة لمدينة الموصل.' },
-                { id: 'p6', model: './models/gold_dinar.glb', x: 4, z: -4, scale: '1 1 1', rot: '0 -45 0', title: 'دينار إسلامي', desc: 'عملة نقدية تاريخية ضُربت في الموصل.' }
+                // وضعيات مخصصة للقطع وللكاميرا لإنشاء مسار سير حقيقي على شكل أضلاع الغرفة (مربع)
+                { type: 'door', title: 'بوابة القاعة', desc: 'مدخل قاعة سنحاريب وأشور بانيبال. تقدم بالسكرول لتبدأ الجولة وتتحرك داخل الغرفة.', year: 'البداية', x: 0, z: 29.5, rot: 180, camX: 0, camZ: 20 },
+                { type: 'panel', panel_img: './models/ashurbanipal_relief.png', title: 'منحوتة صيد الأسود', desc: 'جدارية من القصر الشمالي لأشور بانيبال.', year: '645 ق.م', x: 29.5, z: 10, rot: -90, camX: 20, camZ: 10 },
+                { type: 'cube_artifact', model: './models/cuneiform_tablet.glb', title: 'رقم طيني مسماري', desc: 'من مكتبة أشور بانيبال الشهيرة.', year: 'العصر الآشوري الحديث', x: 29.5, z: -10, rot: -90, camX: 20, camZ: -10 },
+                { type: 'sculpture', model: './models/sennacherib_sculpture.glb', title: 'تمثال الملك سنحاريب', desc: 'الملك الآشوري الذي جعل نينوى عاصمة.', year: '700 ق.م', x: 0, z: -29.5, rot: 0, camX: 0, camZ: -20 },
+                { type: 'hanging_pot', model: './models/pottery_jar.glb', title: 'إناء فخاري آشوري', desc: 'تم العثور عليه في تل قوينجق.', year: '700 ق.م', x: -29.5, z: -10, rot: 90, camX: -20, camZ: -10 },
+                { type: 'cube_artifact', model: './models/cylinder_seal.glb', title: 'ختم اسطواني ملكي', desc: 'تظهر عليه مشاهد دينية وحربية.', year: 'العصر الآشوري', x: -29.5, z: 10, rot: 90, camX: -20, camZ: 10 },
+                // محطة العودة لإكمال الدورة والرجوع للباب
+                { type: 'return_waypoint', title: 'بوابة القاعة', desc: 'لقد أنهيت الجولة في هذه القاعة.', year: 'النهاية', x: 0, z: 29.5, rot: 180, camX: 0, camZ: 20 }
             ],
             'site3': [ 
-                { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل.', year: '1127 م' },
+                { id: 'p7', model: './models/alhadba_minaret.glb', title: 'المنارة الحدباء', desc: 'المعلم الأبرز لمدينة الموصل القديمة.', year: '1127 م' },
                 { id: 'p8', model: './models/nuri_mihrab.glb', title: 'محراب الجامع النوري', desc: 'قطعة فنية نادرة من الرخام.', year: '1170 م' },
-                { id: 'p9', model: './models/mosuli_ewer.glb', title: 'إبريق نحاسي موصلي', desc: 'تحفة مطعمة بالفضة.', year: '1172 م' },
+                { id: 'p9', model: './models/mosuli_ewer.glb', title: 'إبريق نحاسي موصلي', desc: 'تحفة مطعمة بالفضة العصر الأتابكي.', year: '1172 م' },
                 { id: 'p10', model: './models/bashtabiya.glb', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.', year: '1232 م' },
                 { id: 'p11', model: './models/wood_box.glb', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.', year: '1250 م' },
-                { id: 'p12', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى.', year: '1262 م' }
+                { id: 'p12', model: './models/hassuna_pot.glb', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية.', year: '1262 م' }
             ],
             'site4': [ 
-                { id: 'p10', model: './models/bashtabiya.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 0 0', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
-                { id: 'p11', model: './models/wood_box.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.' }
+                { id: 'p10', model: './models/bashtabiya.glb', x: -4, z: -4, scale: '2.5 2.5 2.5', rot: '0 0 0', title: 'مجسم قلعة باشطابيا', desc: 'بقايا القلعة التاريخية المطلة على دجلة.' },
+                { id: 'p11', model: './models/wood_box.glb', x: 0, z: -6, scale: '2.5 2.5 2.5', rot: '0 0 0', title: 'صندوق أتابكي مطعم', desc: 'صندوق أثري من العصر الأتابكي.' }
             ],
             'site5': [ 
-                { id: 'p12', model: './models/hassuna_pot.glb', x: -4, z: -4, scale: '1 1 1', rot: '0 0 0', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية في العالم.' },
-                { id: 'p13', model: './models/winged_bull.glb', x: 0, z: -6, scale: '1 1 1', rot: '0 0 0', title: 'لاماسو مصغر', desc: 'نسخة مصغرة من الثور المجنح.' }
+                { id: 'p12', model: './models/hassuna_pot.glb', x: -4, z: -4, scale: '2.5 2.5 2.5', rot: '0 0 0', title: 'إناء فخاري - حضارة حسونة', desc: 'يعود الإناء إلى أقدم القرى الزراعية.' },
+                { id: 'p13', model: './models/winged_bull.glb', x: 0, z: -6, scale: '2.5 2.5 2.5', rot: '0 0 0', title: 'لاماسو مصغر', desc: 'نسخة مصغرة من الثور المجنح الآشوري.' }
             ]
         };
 
@@ -482,197 +473,174 @@
         const infoPanel = document.getElementById('info-panel');
         const infoTitle = document.getElementById('info-title');
         const infoDesc = document.getElementById('info-desc');
+        const timelineUI = document.getElementById('timeline-ui');
+        const timelineSlider = document.getElementById('timeline-slider');
 
         function enterSite(siteId) {
             uiLayer.style.opacity = '0'; document.getElementById('instructions').style.opacity = '1'; 
             
             let camEl = document.querySelector('#cam');
-            if(camEl) { camEl.object3D.rotation.set(0, 0, 0); }
+            if(camEl) { 
+                camEl.object3D.rotation.set(0, 0, 0); 
+                if(camEl.components['look-controls']) { camEl.components['look-controls'].yawObject.rotation.set(0,0,0); camEl.components['look-controls'].pitchObject.rotation.set(0,0,0); }
+                camEl.setAttribute('look-controls', 'enabled', true);
+            }
             cameraRig.removeAttribute('animation');
 
             setTimeout(() => {
                 uiLayer.style.display = 'none'; uiLayer.style.pointerEvents = 'none'; controlsUI.style.display = 'flex'; 
-                
-                buildWhiteElegantRoom(pillarsContainer);
+                infoPanel.style.display = 'none';
 
                 if (siteId === 'site3') {
+                    buildWhiteElegantRoom(pillarsContainer);
                     startStairsMode(sitesData[siteId]);
+                } else if (siteId === 'site2') {
+                    window.currentRoomType = 'site2';
+                    buildKouyunjikDarkRoom(pillarsContainer);
+                    startKouyunjikMode(sitesData[siteId]);
                 } else {
-                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم في القاعة:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها';
-                    cameraRig.setAttribute('position', '0 1.6 0');
-                    cameraRig.setAttribute('rotation', '0 0 0');
-                    if(camEl) camEl.setAttribute('look-controls', 'enabled', true);
+                    window.currentRoomType = 'normal';
+                    buildWhiteElegantRoom(pillarsContainer);
+                    document.getElementById('instructions').innerHTML = '<b>دليل التحكم:</b><br>👆 إصبع واحد: التفات في المكان<br>✌️ إصبعين: مشي وزووم للتقريب<br>🖱️ اضغط على القطعة لمعرفة تفاصيلها';
+                    cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0');
+                    document.getElementById('main-dir-light').setAttribute('intensity', '0.8');
                     spawnPillarsAndArtifacts(sitesData[siteId]); 
                 }
             }, 800);
         }
 
-        function startStairsMode(data) {
-            window.isStairsMode = true;
-            document.getElementById('instructions').innerHTML = '<b>دليل السجل الزمني:</b><br>↔️ استخدم الشريط بالأسفل للتنقل عبر الزمن<br>👀 المس الشاشة للالتفات حولك';
+        function startKouyunjikMode(data) {
+            document.getElementById('instructions').innerHTML = '<b>دليل الغرفة التاريخية:</b><br>↔️ استخدم السكرول للمشي بمحاذاة المعروضات<br>✌️ زووم للتقريب';
             
-            let timelineUI = document.getElementById('timeline-ui');
+            document.getElementById('main-dir-light').setAttribute('intensity', '0.4');
+            document.getElementById('point-light').setAttribute('intensity', '0.5');
+
+            timelineSlider.max = data.length - 1;
+            timelineSlider.value = 0;
+            timelineSlider.step = 1; 
+            document.getElementById('timeline-year').innerText = 'المعروض';
             timelineUI.style.display = 'flex';
             setTimeout(() => { timelineUI.style.opacity = '1'; }, 50);
 
-            let slider = document.getElementById('timeline-slider');
-            slider.max = data.length - 1;
-            slider.value = 0;
+            window.currentRoomConfig = spawnSite2Artifacts(data);
+            site2TargetProgress = 0; site2CurrentProgress = 0; window.lastShownTextIdx = -1;
+            cameraRig.setAttribute('position', '0 1.6 20'); 
+        }
 
-            let N = data.length;
-            let R = 4.0; 
-            
-            window.currentStairsConfig = data.map((item, i) => {
-                let angle = i * ((2 * Math.PI) / N); 
-                let h = 1.0 + (i * 1.5); 
-                
-                return { 
-                    ...item, 
-                    angle: angle,
-                    x: R * Math.sin(angle), 
-                    z: -R * Math.cos(angle), 
-                    pillarH: h, 
-                    artY: h 
-                };
+        function spawnSite2Artifacts(data) {
+            let config = [];
+
+            data.forEach((item, index) => {
+                // إذا كانت محطة عودة فقط لا ننشئ مجسماً
+                if(item.type === 'return_waypoint') {
+                    config.push({ ...item, artY: 2.5 });
+                    return;
+                }
+
+                let x = item.x; let z = item.z; let rotY = item.rot;
+                let artY = 1.6; 
+
+                let group = document.createElement('a-entity');
+                group.setAttribute('position', `${x} 0 ${z}`);
+                group.setAttribute('rotation', `0 ${rotY} 0`);
+
+                let spot = document.createElement('a-light'); spot.setAttribute('type', 'spot'); spot.setAttribute('intensity', '0.6'); spot.setAttribute('angle', '40'); spot.setAttribute('position', '0 4 3'); spot.setAttribute('target', '#artifact-' + index); group.appendChild(spot);
+
+                if (item.type === 'door') {
+                    let wall = document.createElement('a-box'); wall.setAttribute('width', '8'); wall.setAttribute('height', '7'); wall.setAttribute('depth', '0.2'); wall.setAttribute('color', '#1a1d21'); wall.setAttribute('position', '0 3.5 -0.1'); group.appendChild(wall);
+                    let door = document.createElement('a-plane'); door.setAttribute('width', '3'); door.setAttribute('height', '4.5'); door.setAttribute('color', '#0a0a0c'); door.setAttribute('position', '0 2.25 -0.22'); group.appendChild(door);
+                    let sign = document.createElement('a-plane'); sign.setAttribute('width', '2'); sign.setAttribute('height', '0.6'); sign.setAttribute('color', '#495057'); sign.setAttribute('position', '0 5.2 -0.22'); group.appendChild(sign);
+                    artY = 2.5;
+                } else if (item.type === 'cube_artifact') {
+                    let cube = document.createElement('a-box'); cube.setAttribute('width', '1.2'); cube.setAttribute('height', '1.2'); cube.setAttribute('depth', '1.2'); cube.setAttribute('color', '#495057'); cube.setAttribute('position', '0 0.6 0'); cube.setAttribute('material', 'roughness: 0.5; metalness: 0.3'); cube.setAttribute('shadow', 'cast: true; receive: true'); group.appendChild(cube);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 1.5 0'); artifact.setAttribute('artifact-rotator', ''); group.appendChild(artifact);
+                    artY = 1.5;
+                } else if (item.type === 'panel') {
+                    let frame = document.createElement('a-box'); frame.setAttribute('width', '4.5'); frame.setAttribute('height', '3.5'); frame.setAttribute('depth', '0.2'); frame.setAttribute('color', '#2b2d30'); frame.setAttribute('position', '0 2.5 -0.11'); group.appendChild(frame);
+                    let relief = document.createElement('a-image'); relief.setAttribute('id', 'artifact-' + index); relief.setAttribute('src', `url(${item.panel_img})`); relief.setAttribute('width', '4'); relief.setAttribute('height', '3'); relief.setAttribute('position', '0 2.5 -0.22'); group.appendChild(relief);
+                    artY = 2.5;
+                } else if (item.type === 'sculpture') {
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('position', '0 0.5 0'); artifact.setAttribute('shadow', 'cast: true; receive: true'); group.appendChild(artifact);
+                    artY = 2.5;
+                } else if (item.type === 'hanging_pot') {
+                    let stand = document.createElement('a-cylinder'); stand.setAttribute('radius', '0.05'); stand.setAttribute('height', '4'); stand.setAttribute('color', '#495057'); stand.setAttribute('position', '0 2 -0.11'); group.appendChild(stand);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '1.5 1.5 1.5'); artifact.setAttribute('position', '0 2 -0.3'); group.appendChild(artifact);
+                    artY = 2.0;
+                }
+
+                pillarsContainer.appendChild(group);
+                config.push({ ...item, artY });
             });
+            return config;
+        }
+
+        function startStairsMode(data) {
+            window.isStairsMode = true;
+            document.getElementById('instructions').innerHTML = '<b>دليل السجل الزمني:</b><br>↔️ استخدم السكرول للتنقل عبر الزمن<br>👀 زووم للتقريب';
+            document.getElementById('main-dir-light').setAttribute('intensity', '0.8');
+
+            timelineSlider.max = data.length - 1; timelineSlider.value = 0; timelineSlider.step = 0.01; 
+            document.getElementById('timeline-year').innerText = '1127';
+            timelineUI.style.display = 'flex'; setTimeout(() => { timelineUI.style.opacity = '1'; }, 50);
+
+            let N = data.length; const R = 4.0; 
+            window.currentStairsConfig = data.map((item, i) => { let angle = i * ((2 * Math.PI) / N); let h = 1.0 + (i * 1.5); return { ...item, angle, x: R * Math.sin(angle), z: -R * Math.cos(angle), pillarH: h, artY: h }; });
             
-            maxStairProgress = data.length - 1;
-            targetStairProgress = 0;
-            currentStairProgress = 0;
-            window.lastShownStairText = -1;
-            
-            let camEl = document.querySelector('#cam');
-            if(camEl) { camEl.setAttribute('look-controls', 'enabled', true); }
+            maxStairProgress = data.length - 1; targetStairProgress = 0; currentStairProgress = 0; window.lastShownTextIdx = -1;
             
             window.currentStairsConfig.forEach((item, index) => {
-                let group = document.createElement('a-entity');
-                group.setAttribute('position', `${item.x} 0 ${item.z}`); 
-                group.setAttribute('scale', '0.001 0.001 0.001');
-
-                // بناء الأعمدة البيضاء المظللة والأنيقة (تستقبل وترمي ظلال)
+                let group = document.createElement('a-entity'); group.setAttribute('position', `${item.x} 0 ${item.z}`); group.setAttribute('scale', '0.001 0.001 0.001');
                 let pillarGroup = document.createElement('a-entity');
+                let base = document.createElement('a-cylinder'); base.setAttribute('radius', '0.8'); base.setAttribute('height', '0.3'); base.setAttribute('color', '#ced4da'); base.setAttribute('material', 'roughness: 0.5; metalness: 0.1'); base.setAttribute('position', '0 0.15 0'); pillarGroup.appendChild(base);
+                let shaft = document.createElement('a-cylinder'); shaft.setAttribute('radius', '0.5'); shaft.setAttribute('height', item.pillarH - 0.6); shaft.setAttribute('color', '#ffffff'); shaft.setAttribute('position', `0 ${item.pillarH/2} 0`); pillarGroup.appendChild(shaft);
+                let cap = document.createElement('a-cylinder'); cap.setAttribute('radius', '0.8'); cap.setAttribute('height', '0.3'); cap.setAttribute('color', '#ced4da'); cap.setAttribute('material', 'roughness: 0.5; metalness: 0.1'); cap.setAttribute('position', `0 ${item.pillarH - 0.15} 0`); pillarGroup.appendChild(cap);
                 
-                let base = document.createElement('a-cylinder');
-                base.setAttribute('radius', '0.8'); base.setAttribute('height', '0.3');
-                base.setAttribute('color', '#ced4da'); base.setAttribute('material', 'roughness: 0.5; metalness: 0.1');
-                base.setAttribute('position', '0 0.15 0');
-                base.setAttribute('shadow', 'cast: true; receive: true');
-                pillarGroup.appendChild(base);
-                
-                let shaft = document.createElement('a-cylinder');
-                shaft.setAttribute('radius', '0.5'); shaft.setAttribute('height', item.pillarH - 0.6);
-                shaft.setAttribute('color', '#ffffff'); shaft.setAttribute('position', `0 ${item.pillarH/2} 0`);
-                shaft.setAttribute('shadow', 'cast: true; receive: true');
-                pillarGroup.appendChild(shaft);
-                
-                let cap = document.createElement('a-cylinder');
-                cap.setAttribute('radius', '0.8'); cap.setAttribute('height', '0.3');
-                cap.setAttribute('color', '#ced4da'); cap.setAttribute('material', 'roughness: 0.5; metalness: 0.1');
-                cap.setAttribute('position', `0 ${item.pillarH - 0.15} 0`);
-                cap.setAttribute('shadow', 'cast: true; receive: true');
-                pillarGroup.appendChild(cap);
-                
-                let rotYarcade = (item.angle * 180 / Math.PI);
-                pillarGroup.setAttribute('rotation', `0 ${rotYarcade} 0`); 
-                group.appendChild(pillarGroup);
+                let rotYarcade = (item.angle * 180 / Math.PI); pillarGroup.setAttribute('rotation', `0 ${rotYarcade} 0`); group.appendChild(pillarGroup);
 
-                let artifact;
                 if (item.model) {
-                    artifact = document.createElement('a-entity');
-                    artifact.setAttribute('gltf-model', `url(${item.model})`); 
-                    artifact.setAttribute('scale', '0.8 0.8 0.8'); 
-                    artifact.setAttribute('shadow', 'cast: true; receive: true');
-                    
-                    let rotY = (item.angle * 180 / Math.PI);
-                    artifact.setAttribute('rotation', `0 ${rotY} 0`); 
-                    artifact.setAttribute('position', `0 ${item.artY} 0`);
-                    artifact.setAttribute('class', 'clickable');
-                    artifact.setAttribute('artifact-rotator', ''); 
-                    group.appendChild(artifact);
+                    let artifact = document.createElement('a-entity'); artifact.setAttribute('id', 'artifact-' + index); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); 
+                    let rotY = (item.angle * 180 / Math.PI); artifact.setAttribute('rotation', `0 ${rotY} 0`); artifact.setAttribute('position', `0 ${item.artY} 0`); artifact.setAttribute('artifact-rotator', ''); group.appendChild(artifact);
                 }
                 pillarsContainer.appendChild(group);
-
-                let delay = index * 150; 
-                group.setAttribute('animation', `property: scale; to: 1 1 1; dur: 1500; easing: easeOutBack; delay: ${delay}`);
+                let delay = index * 150; group.setAttribute('animation', `property: scale; to: 1 1 1; dur: 1500; easing: easeOutBack; delay: ${delay}`);
             });
         }
 
         function spawnPillarsAndArtifacts(data) {
             data.forEach((item, index) => {
-                let group = document.createElement('a-entity');
-                group.setAttribute('position', `${item.x} -5 ${item.z}`); 
-
-                // الأعمدة البيضاء المظللة في القاعات العادية
-                let pillar = document.createElement('a-cylinder');
-                pillar.setAttribute('radius', '0.6'); pillar.setAttribute('height', '1.5'); 
-                pillar.setAttribute('color', '#f8f9fa'); pillar.setAttribute('class', 'clickable'); 
-                pillar.setAttribute('shadow', 'cast: true; receive: true');
-                group.appendChild(pillar);
-
-                let artifact;
-                if (item.model) {
-                    artifact = document.createElement('a-entity');
-                    artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '0.8 0.8 0.8'); 
-                    artifact.setAttribute('rotation', item.rot); artifact.setAttribute('position', '0 0.75 0'); 
-                    artifact.setAttribute('class', 'clickable'); 
-                    artifact.setAttribute('shadow', 'cast: true; receive: true');
-                    group.appendChild(artifact);
-                }
+                let group = document.createElement('a-entity'); group.setAttribute('position', `${item.x} -5 ${item.z}`); 
+                let pillar = document.createElement('a-cylinder'); pillar.setAttribute('radius', '0.6'); pillar.setAttribute('height', '1.5'); pillar.setAttribute('color', '#f8f9fa'); pillar.setAttribute('class', 'clickable'); group.appendChild(pillar);
+                if (item.model) { let artifact = document.createElement('a-entity'); artifact.setAttribute('gltf-model', `url(${item.model})`); artifact.setAttribute('scale', '2.5 2.5 2.5'); artifact.setAttribute('rotation', item.rot); artifact.setAttribute('position', '0 0.75 0'); artifact.setAttribute('class', 'clickable'); group.appendChild(artifact); }
                 pillarsContainer.appendChild(group);
-
-                let delay = index * 300; 
-                setTimeout(() => { group.setAttribute('animation', `property: position; to: ${item.x} 0.75 ${item.z}; dur: 1500; easing: easeOutElastic`); }, 400 + delay);
-
+                let delay = index * 300; setTimeout(() => { group.setAttribute('animation', `property: position; to: ${item.x} 0.75 ${item.z}; dur: 1500; easing: easeOutElastic`); }, 400 + delay);
                 let handleClick = function() {
-                    cameraRig.removeAttribute('animation'); 
-                    let dist = Math.sqrt(item.x * item.x + item.z * item.z);
-                    let ratio = (dist - 1.8) / dist; 
-                    let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
-                    
+                    cameraRig.removeAttribute('animation'); let dist = Math.sqrt(item.x * item.x + item.z * item.z); let ratio = (dist - 1.8) / dist; let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
                     cameraRig.setAttribute('animation', `property: position; to: ${zoomX} 1.6 ${zoomZ}; dur: 1500; easing: easeOutCubic`);
-                    if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) {
-                        window.currentRotatingArtifact.removeAttribute('artifact-rotator'); window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot);
-                    }
-                    if (artifact) {
-                        artifact.setAttribute('artifact-rotator', ''); window.currentRotatingArtifact = artifact; window.currentArtifactOriginalRot = item.rot;
-                    }
-                    infoPanel.style.display = 'none';
-                    setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 1200);
+                    let targetVec = new THREE.Vector3(item.x, 1.25, item.z); cameraRig.object3D.lookAt(targetVec);
+                    if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) { window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); }
+                    let artifact = group.querySelector('a-entity[gltf-model]');
+                    if (artifact) { artifact.setAttribute('artifact-rotator', ''); window.currentRotatingArtifact = artifact; window.currentArtifactOriginalRot = item.rot; }
+                    infoPanel.style.display = 'none'; setTimeout(() => { infoTitle.innerText = item.title; infoDesc.innerText = item.desc; if (!window.isUIHidden) infoPanel.style.display = 'block'; }, 1200);
                 };
-                pillar.addEventListener('click', handleClick); if(artifact) artifact.addEventListener('click', handleClick);
+                pillar.addEventListener('click', handleClick);
             });
+            if(data.length > 0) { let first = data[0]; let targetVec = new THREE.Vector3(first.x, 1.25, first.z); cameraRig.object3D.lookAt(targetVec); }
         }
 
         function closeInfoPanel() {
             infoPanel.style.display = 'none'; 
-            if(!window.isStairsMode) cameraRig.setAttribute('animation', `property: position; to: 0 1.6 0; dur: 1500; easing: easeOutCubic`);
-            if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) {
-                window.currentRotatingArtifact.removeAttribute('artifact-rotator'); window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); window.currentRotatingArtifact = null;
-            }
+            if(!window.isStairsMode && window.currentRoomType !== 'site2') cameraRig.setAttribute('animation', `property: position; to: 0 1.6 0; dur: 1500; easing: easeOutCubic`);
+            if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) { window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); window.currentRotatingArtifact = null; }
         }
 
         function exitSite() {
-            uiLayer.style.display = 'block'; 
-            setTimeout(() => { uiLayer.style.opacity = '1'; uiLayer.style.pointerEvents = 'all'; }, 10);
-            
-            window.isUIHidden = false; 
-            window.isStairsMode = false;
-            
-            document.getElementById('timeline-ui').style.display = 'none';
-            document.getElementById('timeline-ui').style.opacity = '0';
-
-            let eyeIcon = document.getElementById('eye-icon');
-            if(eyeIcon) eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
-            
+            uiLayer.style.display = 'block'; setTimeout(() => { uiLayer.style.opacity = '1'; uiLayer.style.pointerEvents = 'all'; }, 10);
+            window.isUIHidden = false; window.isStairsMode = false; window.currentRoomType = '';
+            document.getElementById('timeline-ui').style.display = 'none'; document.getElementById('timeline-ui').style.opacity = '0';
+            let eyeIcon = document.getElementById('eye-icon'); if(eyeIcon) eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             let camEl = document.querySelector('#cam');
-            if(camEl) {
-                camEl.setAttribute('look-controls', 'enabled', true);
-                camEl.object3D.rotation.set(0, 0, 0); 
-            }
-            
-            controlsUI.style.display = 'none'; infoPanel.style.display = 'none'; document.getElementById('instructions').style.opacity = '1'; 
-            pillarsContainer.innerHTML = ''; cameraRig.removeAttribute('animation'); cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0');
-            window.currentRotatingArtifact = null; window.currentArtifactOriginalRot = null;
+            if(camEl) { camEl.setAttribute('look-controls', 'enabled', true); camEl.object3D.rotation.set(0, 0, 0); if(camEl.components['look-controls']) { camEl.components['look-controls'].yawObject.rotation.set(0,0,0); camEl.components['look-controls'].pitchObject.rotation.set(0,0,0); } }
+            controlsUI.style.display = 'none'; infoPanel.style.display = 'none'; document.getElementById('instructions').style.opacity = '1'; pillarsContainer.innerHTML = ''; cameraRig.removeAttribute('animation'); cameraRig.setAttribute('position', '0 1.6 0'); cameraRig.setAttribute('rotation', '0 0 0'); window.currentRotatingArtifact = null; window.currentArtifactOriginalRot = null; window.stairZoom = 0; 
         }
     </script>
 </body>
