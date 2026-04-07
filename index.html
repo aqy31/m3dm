@@ -151,28 +151,37 @@
                     this.isDragging = true; 
                     window.isArtifactDragging = true; 
                     this.previousX = evt.clientX || (evt.touches && evt.touches[0] ? evt.touches[0].clientX : 0);
-                    if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', false);
+                    // تجميد الكاميرا دائماً وفي كل الغرف عند النقر على المجسم
+                    if(this.camera) this.camera.setAttribute('look-controls', 'enabled', false);
                 };
                 this.onMove = (e) => {
                     if (!this.isDragging) return;
-                    if (e.touches && e.touches.length > 1) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); return; }
+                    if (e.touches && e.touches.length > 1) { 
+                        this.isDragging = false; window.isArtifactDragging = false; 
+                        if(this.camera) this.camera.setAttribute('look-controls', 'enabled', true); 
+                        return; 
+                    }
                     let clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : undefined);
                     if(clientX === undefined) return;
                     let deltaX = clientX - this.previousX; 
-                    // الدوران اليدوي السريع
                     this.el.object3D.rotation.y += deltaX * 0.04; 
                     this.previousX = clientX;
                 };
-                this.onUp = () => { if(this.isDragging) { this.isDragging = false; window.isArtifactDragging = false; if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true); } };
+                this.onUp = () => { 
+                    if(this.isDragging) { 
+                        this.isDragging = false; window.isArtifactDragging = false; 
+                        // إعادة تشغيل الكاميرا عند إفلات المجسم
+                        if(this.camera) this.camera.setAttribute('look-controls', 'enabled', true); 
+                    } 
+                };
                 this.el.addEventListener('mousedown', this.onDown); window.addEventListener('mousemove', this.onMove);
                 window.addEventListener('mouseup', this.onUp); window.addEventListener('touchmove', this.onMove, {passive: true}); window.addEventListener('touchend', this.onUp);
             },
-            // تم إرجاع الدوران التلقائي المستمر هنا ليعمل إذا لم تكن تلمس المجسم
             tick: function () { if (!this.isDragging) this.el.object3D.rotation.y += 0.005; },
             remove: function () {
                 this.el.removeEventListener('mousedown', this.onDown); window.removeEventListener('mousemove', this.onMove);
                 window.removeEventListener('mouseup', this.onUp); window.removeEventListener('touchmove', this.onMove); window.removeEventListener('touchend', this.onUp);
-                if(this.camera && !window.isStairsMode && window.currentRoomType !== 'site2') this.camera.setAttribute('look-controls', 'enabled', true);
+                if(this.camera) this.camera.setAttribute('look-controls', 'enabled', true);
             }
         });
 
@@ -249,7 +258,9 @@
                     this.el.setAttribute('position', `${currentCamX} 1.6 ${currentCamZ}`);
                     
                     let targetVec = new THREE.Vector3(artX, artY, artZ);
-                    this.el.object3D.lookAt(targetVec);
+                    let m = new THREE.Matrix4();
+                    m.lookAt(this.el.object3D.position, targetVec, new THREE.Vector3(0,1,0));
+                    this.el.object3D.quaternion.setFromRotationMatrix(m);
 
                 } else {
                     let currentAngle = c1.angle + (c2.angle - c1.angle) * t;
@@ -269,7 +280,9 @@
                     let artX = 4.0 * Math.sin(currentAngle);
                     let artZ = -4.0 * Math.cos(currentAngle);
                     let targetVec = new THREE.Vector3(artX, currentH + 0.5, artZ);
-                    this.el.object3D.lookAt(targetVec);
+                    let m = new THREE.Matrix4();
+                    m.lookAt(this.el.object3D.position, targetVec, new THREE.Vector3(0,1,0));
+                    this.el.object3D.quaternion.setFromRotationMatrix(m);
                 }
 
                 let closest = Math.round(progress);
@@ -662,7 +675,12 @@
                     cameraRig.removeAttribute('animation'); let dist = Math.sqrt(item.x * item.x + item.z * item.z); 
                     let ratio = (dist - 1.0) / dist; let zoomX = item.x * ratio; let zoomZ = item.z * ratio;
                     cameraRig.setAttribute('animation', `property: position; to: ${zoomX} 1.6 ${zoomZ}; dur: 1500; easing: easeOutCubic`);
-                    let targetVec = new THREE.Vector3(item.x, 1.25, item.z); cameraRig.object3D.lookAt(targetVec);
+                    
+                    let targetVec = new THREE.Vector3(item.x, 1.25, item.z);
+                    let m = new THREE.Matrix4();
+                    m.lookAt(new THREE.Vector3(zoomX, 1.6, zoomZ), targetVec, new THREE.Vector3(0,1,0));
+                    cameraRig.object3D.quaternion.setFromRotationMatrix(m);
+
                     if (window.currentRotatingArtifact && window.currentArtifactOriginalRot) { window.currentRotatingArtifact.setAttribute('rotation', window.currentArtifactOriginalRot); }
                     let artifact = group.querySelector('a-entity[gltf-model]');
                     if (artifact) { artifact.setAttribute('artifact-rotator', ''); window.currentRotatingArtifact = artifact; window.currentArtifactOriginalRot = item.rot; }
@@ -672,7 +690,12 @@
                 let artEl = group.querySelector('a-entity[gltf-model]');
                 if (artEl) artEl.addEventListener('click', handleClick);
             });
-            if(data.length > 0) { let first = data[0]; let targetVec = new THREE.Vector3(first.x, 1.25, first.z); cameraRig.object3D.lookAt(targetVec); }
+            if(data.length > 0) { 
+                let first = data[0]; let targetVec = new THREE.Vector3(first.x, 1.25, first.z); 
+                let m = new THREE.Matrix4();
+                m.lookAt(cameraRig.object3D.position, targetVec, new THREE.Vector3(0,1,0));
+                cameraRig.object3D.quaternion.setFromRotationMatrix(m);
+            }
         }
 
         function closeInfoPanel() {
